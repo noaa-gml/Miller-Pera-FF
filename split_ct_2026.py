@@ -1,0 +1,218 @@
+#!/usr/bin/env python3
+"""
+split_ct_2026.py — Split monolithic ash_ff_2026.nc into CarbonTracker-format
+per-year and per-month files matching the output format of split.py.
+
+Input:   outputs/ash_ff_2026.nc
+Outputs: outputs/ct/flux1x1_ff.{YYYY}.nc      (per-year,  12 months each)
+         outputs/ct/flux1x1_ff.{YYYYMM}.nc    (per-month, 1  month  each)
+
+CarbonTracker conventions (matching split.py):
+  - time dim named 'date', values are midpoint of each month
+  - 'date_bounds' with bounds dim 'bounds'
+  - 'decimal_date' variable (fractional years)
+  - 'date_components' / 'calendar_components' variables
+  - CarbonTracker global attributes (Notes, disclaimer, etc.)
+  - Only 'fossil_imp' variable (no diagnostics)
+  - Encoding: days since 1900-01-01, float64 for dates, float32 for data
+  - Unlimited 'date' dimension
+"""
+
+import os
+import sys
+from datetime import datetime, timezone
+
+import numpy as np
+import pandas as pd
+import xarray as xr
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Configuration
+# ═══════════════════════════════════════════════════════════════════════════════
+MONOLITHIC = "outputs/ash_ff_2026.nc"
+CT_DIR     = "outputs/ct"
+CT_PREFIX  = "flux1x1_ff"
+VAR_NAME   = "fossil_imp"
+SOURCE_STRING = ("Miller FF 2026, 1993 country bounds. "
+                 "CDIAC-AppState 2021; EI 2025; EDGAR 2025 GHG; "
+                 "USGS MCS Cement 2025")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Build CarbonTracker dataset
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def build_carbontracker_dataset(ds_in):
+    """
+    Transform the monolithic dataset into CarbonTracker delivery format:
+      - time → 'date' (midpoint of each month)
+      - date_bounds, decimal_date, date_components, calendar_components
+      - CarbonTracker global attributes
+      - Only fossil_imp (no diagnostics)
+    """
+    # Keep fossil_imp plus lat/lon bounds so bounds attributes aren't dangling
+    keep_vars = [VAR_NAME]
+    for bv in ("lat_bounds", "lon_bounds"):
+        if bv in ds_in:
+            keep_vars.append(bv)
+    ds = ds_in[keep_vars].copy(deep=True)
+
+    # Compute date as midpoint of each month from time_bnds
+    bnds = ds_in["time_bnds"].values.astype("datetime64[ns]")  # ensure datetime64
+    midpoints = bnds[:, 0] + (bnds[:, 1] - bnds[:, 0]) / 2
+    ds["time"] = midpoints
+    ds["date_bounds"] = (("time", "bounds"), bnds)
+
+    # Rename time -> date
+    ds = ds.rename({"time": "date"})
+    ds["date"].attrs["bounds"] = "date_bounds"
+
+    # decimal_date — leap-year aware
+    def _decimal_year(dt64):
+        """Convert datetime64 to decimal year, accounting for leap years."""
+        dt = pd.Timestamp(dt64).to_pydatetime().replace(tzinfo=timezone.utc)
+        year_start = datetime(dt.year, 1, 1, tzinfo=timezone.utc)
+        year_end = datetime(dt.year + 1, 1, 1, tzinfo=timezone.utc)
+        frac = (dt - year_start).total_seconds() / (year_end - year_start).total_seconds()
+        return dt.year + frac
+
+    ds["decimal_date"] = (
+        ("date",),
+        np.array([_decimal_year(d) for d in ds["date"].values]),
+    )
+    ds["decimal_date"].attrs["units"] = "years"
+
+    # date_components
+    ds["calendar_components"] = [1, 2, 3, 4, 5, 6]
+    ds["date_components"] = (
+        ("calendar_components", "date"),
+        np.stack([
+            ds["date"].dt.year.values,
+            ds["date"].dt.month.values,
+            ds["date"].dt.day.values,
+            ds["date"].dt.hour.values,
+            ds["date"].dt.minute.values,
+            ds["date"].dt.second.values,
+        ]),
+    )
+    ds["date_components"].attrs["long_name"] = "integer components of UTC date"
+    ds["date_components"].attrs["comment"] = (
+        "Calendar date components as integers.  Times and dates are UTC."
+    )
+    ds["date_components"].attrs["order"] = "year, month, day, hour, minute, second"
+
+    # CarbonTracker global attributes
+    ds.attrs = {
+        "Notes": (
+            "This file contains CarbonTracker surface CO2 fluxes averaged "
+            "over each time interval.  The times on the date axis are the "
+            "centers of each averaging period."
+        ),
+        "disclaimer": (
+            "CarbonTracker is an open product of the NOAA Earth System Research \n"
+            "Laboratory using data from the Global Monitoring Division greenhouse \n"
+            "gas observational network and collaborating institutions.  Model results \n"
+            "including figures and tabular material found on the CarbonTracker \n"
+            "website may be used for non-commercial purposes without restriction,\n"
+            "but we request that the following acknowledgement text be included \n"
+            "in documents or publications made using CarbonTracker results: \n"
+            "\n"
+            "     CarbonTracker results provided by NOAA/ESRL,\n"
+            "     Boulder, Colorado, USA, http://carbontracker.noaa.gov\n"
+            "\n"
+            "Since we expect to continuously update the CarbonTracker product, it\n"
+            "is important to identify which version you are using.  To provide\n"
+            "accurate citation, please include the version of the CarbonTracker\n"
+            "release in any use of these results.\n"
+            "\n"
+            "The CarbonTracker team welcomes special requests for data products not\n"
+            "offered by default on this website, and encourages proposals for\n"
+            "collaborative activities.  Contact us at carbontracker.team@noaa.gov.\n"
+        ),
+        "email": "carbontracker.team@noaa.gov",
+        "url": "http://carbontracker.noaa.gov",
+        "institution": "NOAA Earth System Research Laboratory",
+        "Conventions": "CF-1.9",
+        "history": (
+            f"Created on {datetime.now(timezone.utc).isoformat()}\n"
+            f"by script {os.path.basename(__file__)}"
+        ),
+        "Source": f"John Miller (Ash) fossil fuel emissions estimate — {SOURCE_STRING}",
+    }
+
+    return ds
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Main
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def main():
+    if not os.path.exists(MONOLITHIC):
+        print(f"ERROR: {MONOLITHIC} not found. Run post_process_2026.py first.", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Loading {MONOLITHIC} ...")
+    ds_in = xr.open_dataset(MONOLITHIC)
+
+    # --- input validation ---
+    for required in [VAR_NAME, "time_bnds"]:
+        assert required in ds_in, f"Required variable '{required}' not found in {MONOLITHIC}; got {list(ds_in.data_vars)}"
+    assert "time" in ds_in.dims, f"Required dimension 'time' not found in {MONOLITHIC}; got {list(ds_in.dims)}"
+    n_months = ds_in.sizes["time"]
+    assert n_months > 0, "Input dataset has zero time steps"
+    assert n_months % 12 == 0, f"Expected a whole number of years (multiple of 12 months), got {n_months}"
+
+    print(f"  {VAR_NAME} shape={ds_in[VAR_NAME].shape}  dims={ds_in[VAR_NAME].dims}")
+
+    print("Building CarbonTracker-format dataset ...")
+    ds_ct = build_carbontracker_dataset(ds_in)
+
+    os.makedirs(CT_DIR, exist_ok=True)
+
+    ct_encoding = {
+        "date": {"units": "days since 1900-01-01", "dtype": "float64"},
+        "calendar_components": {"dtype": "int32"},
+        "date_components": {"dtype": "int32"},
+        VAR_NAME: {"dtype": "float32", "zlib": True, "complevel": 4},
+    }
+
+    print(f"Writing per-year and per-month files to {CT_DIR}/ ...")
+
+    for year, ds_yr in ds_ct.groupby("date.year"):
+        year = int(year)
+        yr_fname = os.path.join(CT_DIR, f"{CT_PREFIX}.{year}.nc")
+        ds_yr.to_netcdf(yr_fname, encoding=ct_encoding, unlimited_dims=["date"])
+        print(f"  {year}:", end="")
+
+        for month, ds_mon in ds_yr.groupby("date.month"):
+            month = int(month)
+            mon_fname = os.path.join(CT_DIR, f"{CT_PREFIX}.{year}{month:02d}.nc")
+            ds_mon.to_netcdf(mon_fname, encoding=ct_encoding, unlimited_dims=["date"])
+            print(f" {month}", end="", flush=True)
+        print()
+
+    # --- output validation ---
+    n_years_expected = n_months // 12
+    all_ct = [f for f in os.listdir(CT_DIR) if f.startswith(CT_PREFIX + ".") and f.endswith(".nc")]
+    stem = lambda f: f.replace(CT_PREFIX + ".", "").replace(".nc", "")
+    yr_files = sorted(f for f in all_ct if len(stem(f)) == 4 and stem(f).isdigit())
+    mon_files = sorted(f for f in all_ct if len(stem(f)) == 6 and stem(f).isdigit())
+    assert len(yr_files) == n_years_expected, f"Expected {n_years_expected} per-year files, found {len(yr_files)}"
+    assert len(mon_files) == n_months, f"Expected {n_months} per-month files, found {len(mon_files)}"
+
+    # spot-check: each per-year file should have 12 months
+    for yf in yr_files:
+        ds_check = xr.open_dataset(os.path.join(CT_DIR, yf))
+        n = ds_check.sizes["date"]
+        ds_check.close()
+        assert n == 12, f"{yf}: expected 12 months, got {n}"
+
+    print(f"\nDone. CarbonTracker-format files written to {CT_DIR}/")
+    print(f"  {len(yr_files)} per-year files, {len(mon_files)} per-month files")
+    print(f"  Pattern: {CT_PREFIX}.YYYY.nc  and  {CT_PREFIX}.YYYYMM.nc")
+
+
+if __name__ == "__main__":
+    main()

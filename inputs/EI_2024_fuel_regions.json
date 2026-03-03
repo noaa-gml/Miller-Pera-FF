@@ -1,0 +1,139 @@
+{
+    "Central America" : [
+        "Belize",
+        "Costa Rica",
+        "El Salvador",
+        "Guatemala",
+        "Honduras",
+        "Nicaragua",
+        "Panama"
+    ],
+    "Eastern Africa" : [
+        "Burundi",
+        "Comoros",
+        "Djibouti",
+        "Ethiopia",
+        "Kenya",
+        "Madagascar",
+        "Malawi",
+        "Mauritius",
+        "Mozambique",
+        "Reunion",
+        "Rwanda",
+        "Seychelles",
+        "Somalia",
+        "Sudan",
+        "Uganda",
+        "United Republic Of Tanzania",
+        "Zambia",
+        "Zimbabwe"
+    ],
+    "Middle Africa" : [
+        "Angola",
+        "Central African Republic",
+        "Chad",
+        "Congo",
+        "Democratic Republic Of The Congo",
+        "Equatorial Guinea",
+        "Gabon",
+        "Republic Of Cameroon",
+        "Sao Tome & Principe"
+    ],
+    "Other Asia Pacific" : [
+        "Afghanistan",
+        "Bhutan",
+        "Brunei",
+        "Cambodia",
+        "Cook Islands",
+        "Democratic People S Republic Of Korea",
+        "Fiji",
+        "French Polynesia",
+        "Kiribati",
+        "Laos",
+        "Maldives",
+        "Mongolia",
+        "Myanmar",
+        "Nauru",
+        "Nepal",
+        "New Caledonia",
+        "Papua New Guinea",
+        "Samoa",
+        "Solomon Islands",
+        "Tonga",
+        "Vanuatu"
+    ],
+    "Other Caribbean" : [
+        "Antigua & Barbuda",
+        "Bahamas",
+        "Barbados",
+        "Bermuda",
+        "Cuba",
+        "Dominica",
+        "Dominican Republic",
+        "Grenada",
+        "Guadeloupe",
+        "Haiti",
+        "Jamaica",
+        "Martinique",
+        "Saint Lucia",
+        "St. Kitts-Nevis",
+        "St. Vincent & The Grenadines"
+    ],
+    "Other CIS" : [
+        "Armenia",
+        "Georgia",
+        "Kyrgyzstan",
+        "Republic Of Moldova",
+        "Tajikistan"
+    ],
+    "Other Europe" : [
+        "Albania",
+        "Faeroe Islands",
+        "Greenland",
+        "Malta",
+        "Yugoslavia"
+    ],
+    "Other Middle East" : [
+        "Bahrain",
+        "Jordan",
+        "Lebanon",
+        "Syria", 
+        "Yemen"
+    ],
+    "Other Northern Africa" : [
+        "Libya",
+        "Tunisia"
+    ],
+    "Other South America" : [
+        "Bolivia",
+        "Falkland Islands",
+        "French Guiana",
+        "Guyana",
+        "Paraguay",
+        "Suriname",
+        "Uruguay"
+    ],
+    "Other Southern Africa" : [
+        "Botswana",
+        "Namibia",
+        "Swaziland"
+    ],
+    "Western Africa" : [
+        "Benin",
+        "Burkina Faso",
+        "Cape Verde",
+        "Cote D Ivoire",
+        "Gambia",
+        "Ghana",
+        "Guinea",
+        "Guinea Bissau",
+        "Liberia",
+        "Mali",
+        "Mauritania",
+        "Niger",
+        "Nigeria",
+        "Senegal",
+        "Sierra Leone",
+        "Togo"
+    ]
+}

@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Data files
+*.nc
+*.sav
+*.npz
+
+# Large input files (download per README instructions)
+*.xlsx
+~$*
+
+# Generated reports
+verify_*_report.html
+verify_*_report.pdf
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
