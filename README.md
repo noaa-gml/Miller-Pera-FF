@@ -1,6 +1,6 @@
 # Miller-Pera FF — Global Fossil-Fuel CO₂ Emissions
 
-Gridded 1° × 1° monthly fossil-fuel CO₂ emission estimates (1993–2025) for use as prior fluxes in atmospheric inversions (CarbonTracker, TM5-4DVar).
+Gridded 1° × 1° monthly fossil-fuel CO₂ emission estimates (1993–2025) for use as prior fluxes in atmospheric inversions (CarbonTracker, TM5-4DVar) in the NOAA GML.
 
 Combines national inventories (**CDIAC**, **Energy Institute**, **USGS cement**) with **EDGAR** spatial patterns to produce a global, monthly, sector-resolved product.
 
@@ -18,6 +18,8 @@ python post_process_2026b.py          # Step 3  — netCDF conversion (auto-call
 ```
 
 **Requirements:** Python 3.12, conda env `p312` — numpy, scipy, pandas, xarray, pint-xarray, cf_xarray, xesmf, netCDF4, openpyxl.
+
+**Contact** Ashley Pera, (mailto:ashley.pera@noaa.gov)
 
 ## Data Sources
 
@@ -107,7 +109,7 @@ The EI does not report individual data for all 189 CDIAC countries. Countries wi
 
 Flaring uses the same per-country EI ratio mechanism as the combustion fuels: countries with direct EI flaring data get their own year-over-year CO₂-from-flaring growth rates, while countries in regional aggregates share the regional rate. For the global total extrapolation (used to compute the bunker-fuel residual), flaring volumes (BCM) are read from the EI "Natural Gas Flaring" sheet and converted to year-over-year ratios.
 
-For **2025**, USGS cement data is available and per-country cement ratios are applied directly. For gas, oil, coal, and flaring, the last available EI year-over-year fractional changes (2024) are held constant and applied forward.
+For **2025**, USGS cement data is available and per-country cement ratios are applied directly. For combustion fuels and flaring, assumed growth rates are applied uniformly across all countries: oil +2.5%, gas +2.5%, coal +1%, flaring +1%. These rates reflect consensus near-term projections and are configured in `ff_country_2026.py` (step 3a′ of `main()`).
 
 ### Pipeline Overview
 
@@ -135,14 +137,14 @@ The verification notebook (`verify_2026b.ipynb`) runs 90+ checks organised into 
 
 **Part I — Input Data Integrity (Sections 1–4)**
 
-- **Section 1 (1a–1l):** CDIAC accounting identities, suspicious jumps, gaps, negatives, country-grid mapping, bunker fractions, Excel schema stability, aggregation drift, French department interpolation, sector-sum integrity, interpolation audit
+- **Section 1 (1a–1l):** CDIAC accounting identities, suspicious jumps, gaps, negatives, country-grid mapping, deleted-territory emission quantification, bunker fractions, Excel schema stability, aggregation drift, French department interpolation, sector-sum integrity, interpolation audit
 - **Section 2 (2a–2j):** EDGAR file completeness, global-total accuracy, TOTALS ≥ NMM + PRO_FFF, real-vs-FAKE year split, inter-year continuity, negative pixels, dimension consistency, extrapolation boundary, spatial stability, NetCDF schema
-- **Section 3 (3a–3o):** USGS-vs-CDIAC cement, EI country coverage, EI-vs-CDIAC validation, fractional-change plausibility, USGS year/country coverage, EI/USGS Excel schema, EI national CSV structure, fractional-change files, USGS sentinel labels, fallback coverage, flaring BCM check, region-vs-direct audit, USGS name join audit
+- **Section 3 (3a–3o):** USGS-vs-CDIAC cement, EI country coverage, EI-vs-CDIAC validation, fractional-change plausibility, USGS year/country coverage, EI/USGS Excel schema, EI national CSV structure, fractional-change files, USGS sentinel labels, fallback coverage, flaring BCM check, per-country flaring ratio validation, region-vs-direct audit, USGS name join audit
 - **Section 4 (4a–4l):** Monthly flux array shape/range, country grid coverage, fracarr integrity, GISS grid file, country list ordering, seasonal input format, piqs negative-clamp fraction, fracarr sector-index sanity, fracarr sector correlation
 
 **Part II — Output Quality (Sections 5–11)**
 
-- **Section 5 (5a–5h):** Global totals vs CDIAC, time series, growth rates, per-capita sanity, COVID-19 dip, post-CDIAC trend validation, decadal benchmarks, national-sum conservation
+- **Section 5 (5a–5h):** Global totals vs CDIAC, time series, growth rates, per-capita sanity, COVID-19 dip, post-CDIAC trend validation, assumed 2025 growth rate verification, per-sector 2024→2025 decomposition, decadal benchmarks, national-sum conservation
 - **Section 6 (6a–6k):** Data quality, unit cross-verification, coordinate integrity, metadata consistency, CT-format spot-check, monthly↔yearly self-consistency, TM5 file check, calendar accuracy, coordinate bounds, float32 fidelity, CF attributes
 - **Section 7 (7a–7d):** Spatial correlation with previous products, comparison maps, fractional-difference maps
 - **Section 8 (8a–8l):** Hemisphere balance, sector breakdown, country-level totals, variability hotspots, COVID spatial pattern, industrial zone hot spots, flaring concentration, polar zero-check, grid-cell roundtrip, seasonal ratio map, boundary leakage, rank stability
@@ -285,7 +287,7 @@ python ingest_2026b.py
 | `EI_flaring_bcm.csv` | Global flaring volumes in BCM from EI (used by ff_country for flaring ratios) |
 | `USGS_cement_2026b.csv` | Merged USGS cement production data |
 | `USGS_cement_ratios_2020-2026b.csv` | Cement production ratios relative to 2020 |
-| `fracarr_2026b.npz` | Sector-specific normalized EDGAR spatial fractions (180×360×nyears×3: combustion/flaring/cement) + TOTALS pattern for bunker fuels |
+| `edgar_patterns.npz` | Sector-specific normalized EDGAR spatial fractions (180×360×nyears×3: combustion/flaring/cement) + TOTALS pattern for bunker fuels |
 
 ## Step 2: Country-Level Gridding
 
@@ -309,10 +311,11 @@ python ff_country_2026b.py
   - Bunker fuels (global minus sum-of-countries) → TOTALS pattern over ocean cells
 
 - **Extrapolation approach:**
-  - Gas / oil / coal use per-country EI ratios (3 years: 2022–2024, held flat for 2025)
-  - Flaring uses global EI ratios (held flat for 2025)
-  - Cement uses per-country USGS ratios (4 years: 2022–2025, not held flat — USGS data extends beyond EI)
+  - Gas / oil / coal use per-country EI ratios for 2023–2024, then assumed growth rates for 2025 (gas +2.5%, oil +2.5%, coal +1%)
+  - Flaring uses global EI ratios for 2023–2024, then assumed +1% for 2025
+  - Cement uses per-country USGS ratios for all extrapolation years (2023–2025)
   - Global totals are extrapolated independently using the same source ratios
+  - Assumed 2025 rates are configured in step 3a′ of `main()` — update these when better data becomes available
 
 - **Inputs:** All files from `processed_inputs/` (CDIAC, EI, USGS cement ratios, EDGAR spatial patterns)
 - **Output:** `outputs/ff_monthly_2026b_py.npz`
@@ -366,6 +369,7 @@ Comparison checks are in `verify_2026b.ipynb` (Check 6e).
 - **1c.** Gaps in country records — nations with missing years between first and last appearance
 - **1d.** Negative emission values — negative totals (critical, data corruption) and negative sector values (gas/liquid/solid/flaring/cement; total can still be positive, e.g. Estonia liquid_fuel 2018–2021)
 - **1e.** Country-to-grid mapping completeness — verifies positional alignment between the CDIAC country list and the GISS code table (ff_country matches by position, not by name), then checks that each country's assigned code maps to ≥1 grid cell; countries with 0 cells have emissions silently dropped. Name differences (e.g. 'Russia' vs 'RUSSIAN FEDERATION') are shown as informational, not failures.
+- **1e′.** Emissions lost to deleted territories — loads the raw CDIAC xlsx and sums emissions from the 22 small territories deleted during ingestion (Cayman Islands, Palau, Montserrat, etc.) because they have no GISS grid cells; shows per-territory breakdown and fraction of global total (~800 Gg C/yr, 0.008%; pass if < 0.1%)
 - **1f.** Bunker fraction plausibility — global minus national sum should be 2–8% of total with no sudden jumps
 - **1g.** Country zero-emission transitions — significant CDIAC emitters that drop to zero (data truncation check)
 - **1h.** CDIAC Excel schema integrity — sheet name 'Sheet1' present; all expected column headers intact (detects renamed/reordered columns in future CDIAC releases)
@@ -386,9 +390,9 @@ Comparison checks are in `verify_2026b.ipynb` (Check 6e).
 - **2i.** Spatial pattern stability of extrapolated years (r ≈ 1.0 across all three sectors)
 - **2j.** EDGAR NetCDF variable & grid schema — `fluxes` variable present, `year`/`units` attributes intact (`kg m-2 s-1`), grid shape (1800, 3600); catches variable renames between EDGAR releases
 
-*Section 3 — EI & USGS Input Checks (3a–3o):*
+*Section 3 — EI & USGS Input Checks (3a–3n):*
 - **3a.** USGS cement vs CDIAC cement — clinker-converted world total agrees within ±30%
-- **3b.** EI country coverage vs CDIAC — countries missing from EI fall back to global growth rates; flag large emitters
+- **3b.** EI country coverage vs CDIAC — classifies each CDIAC country as direct or regional EI data; flags large emitters (avg > 1000 Gg C/yr) relying on regional rates
 - **3c.** EI vs CDIAC 2021 validation — apply 2021 EI ratios to 2020 CDIAC nationals; compare to actual (< 5% error)
 - **3d.** EI fractional change plausibility — flag ratios > 3× or < 0.2× that would produce unrealistic extrapolations
 - **3e.** USGS cement year coverage — ratios available for all pipeline extrapolation years (2022–2025)
@@ -399,19 +403,19 @@ Comparison checks are in `verify_2026b.ipynb` (Check 6e).
 - **3j.** EI fractional change file completeness — `EI_frac_changes_*_{gas,coal,oil}.csv` have all extrapolation year columns, correct country count, no NaN/Inf, all ratios positive
 - **3k.** USGS cement sentinel label stability — `'World total (rounded)'` and `'Other countries (rounded)'` present in merged CSV; these strings are hard-coded in ingest — if USGS renames them in a future edition the pipeline silently mis-computes
 - **3l.** USGS cement fallback coverage — identifies which CDIAC countries fall back to the global 'Other countries' cement ratio (case-insensitive name matching); ranks fallback countries by CDIAC cement emissions
-- **3m.** Hardcoded flaring ratios vs EI global flaring — compares year-over-year direction of BCM volumes (from `EI_flaring_bcm.csv`) against EI TG CO₂ flaring totals; flags years where BCM and EI point in opposite directions
-- **3n.** EI region-vs-direct coverage audit — classifies each CDIAC country as using per-country EI data or a regional aggregate (from `EI_2024_fuel_regions.json` / `EI_2024_flaring_regions.json`); flags large emitters relying on regional rates, which may indicate a name mismatch that accidentally pushed a directly-covered country into a region bucket
-- **3o.** USGS cement name join audit — reads all raw USGS cement CSVs, applies `USGS_RENAMES`, and checks whether each country name (after renaming, title-cased) exactly matches a CDIAC country; USGS entries that fail to match have their cement data silently replaced by the global `'Other countries'` average. Complements check 3l (CDIAC-side fallback) with the USGS-side view.
+- **3m.** Global flaring BCM ratios vs EI national flaring — compares year-over-year direction of BCM volumes (from `EI_flaring_bcm.csv`, used for global total extrapolation) against EI TG CO₂ flaring totals; flags years where BCM and EI point in opposite directions
+- **3m2.** Per-country flaring ratios validation — checks `EI_frac_changes_2020-2024_flaring.csv` shape (189 × 3), absence of NaN, plausible range [0.3, 3.0], emission-weighted mean vs global BCM ratio (expect < 10% difference), and confirms direct-EI countries show more ratio variation than regional-aggregate countries
+- **3n.** USGS cement name join audit — reads all raw USGS cement CSVs, applies `USGS_RENAMES`, and checks whether each country name (after renaming, title-cased) exactly matches a CDIAC country; USGS entries that fail to match have their cement data silently replaced by the global `'Other countries'` average. Complements check 3l (CDIAC-side fallback) with the USGS-side view.
 
 *Section 4 — Processed Intermediate Checks (4a–4l):*
 - **4a.** Monthly flux array (`ff_monthly_2026b_py.npz`) — shape, time span, non-negativity, spatial coverage
 - **4b.** Country grid land cell coverage — unique codes, ocean fraction, suspicious high-flux unassigned cells
-- **4c.** `fracarr_2026b.npz` integrity — shape, value range [0, 1], no NaN
+- **4c.** `edgar_patterns.npz` integrity — shape, value range [0, 1], no NaN
 - **4d.** GISS country grid file integrity — `COUNTRY1X1.1993.mod.txt` reshapes to (180, 360), code range valid, ocean fraction 55–80%, all code-table entries represented in the map
 - **4e.** Country list ordering consistency — `processed_inputs/CDIAC_countries_2021.txt` and `processed_inputs/CDIAC_countries.csv` must have identical country names in the same positional order (ff_country relies on positional alignment between these two files)
 - **4f.** Seasonal cycle input file format & amplitude — Blasing file (`emis_mon_usatotal_2col.txt`) has ≥ 24 rows and amplitude `(max−min)/mean < 1.0` (otherwise `1 + seasff` could go negative); Eurasian file (`eurasian_seasff.txt`) has exactly 12 rows with all scale factors in 0.3–3.0
 - **4g.** Piqs negative-clamp fraction — detects pixel-years where all 12 monthly values are identical and non-zero (the spline produced a negative daily value and ff_country substituted the flat annual mean); bar chart by year, red if clamped fraction > 2%
-- **4h.** fracarr sector index sanity — verifies that the three layers of `fracarr_2026b.npz` are in the expected order (0 = combustion, 1 = flaring, 2 = cement) by computing Spearman rank correlation between each layer and its corresponding EDGAR source (TOTALS−NMM−PRO_FFF, PRO_FFF, NMM respectively); a layer-order swap would silently mis-assign flaring to cement locations, undetectable from global totals
+- **4h.** fracarr sector index sanity — verifies that the three layers of `edgar_patterns.npz` are in the expected order (0 = combustion, 1 = flaring, 2 = cement) by computing Spearman rank correlation between each layer and its corresponding EDGAR source (TOTALS−NMM−PRO_FFF, PRO_FFF, NMM respectively); a layer-order swap would silently mis-assign flaring to cement locations, undetectable from global totals
 - **4k.** Piqs negative-clamp fraction threshold — warns if > 1.5% of land pixels are clamped in any year
 - **4l.** fracarr sector correlation — for each sector, computes Pearson correlation between the fracarr layer and the independently-loaded EDGAR source field (area-weighted, normalized, with combustion = TOTALS − NMM − PRO_FFF replicated); r < 0.90 is a warning
 
@@ -424,8 +428,10 @@ Comparison checks are in `verify_2026b.ipynb` (Check 6e).
 - **5d.** Per-capita emissions sanity check — top 10 emitters vs expected tC/person/yr benchmarks
 - **5e.** 2020 COVID-19 dip — CDIAC 2020 drop vs 2019 (expected −6 to −8%), also verified in output
 - **5f.** Post-CDIAC trend validation — 2022–2024 year-over-year changes vs EI-implied growth
+- **5f′.** Assumed 2025 growth rate verification — checks that the assumed sector rates (gas +2.5%, oil +2.5%, coal +1%, flaring +1%, cement from USGS) propagated correctly; compares output 2024→2025 YoY against expected weighted change from sector shares (pass if within 1 pp)
+- **5f″.** Per-sector 2024→2025 decomposition — table showing each sector's CDIAC 2022 base → estimated 2024 → estimated 2025 with absolute Gg C change and percentage; identifies whether combustion growth outweighs the USGS cement decline
 - **5g.** Decadal growth rate benchmarks — 1993–2000, 2000–2010, 2010–2020 vs published literature
-- **5h.** National-sum conservation at CDIAC→EI boundary — for 2022–2024, applies EI fractional changes to CDIAC 2021 country totals and compares the national sum against the output global total (expect ratio ≈ 1.00 within 2%); catches countries lost or double-counted in `ff_country_2026b.py`'s extrapolation loop
+- **5h.** National-sum conservation at CDIAC→EI boundary — for 2023–2024, applies per-country EI fractional changes (gas, oil, coal, flaring) and USGS cement ratios to CDIAC 2022 country totals, scales by the bunker fraction, and compares against the output global total (expect ratio ≈ 1.00 within 2%); catches countries lost or double-counted in `ff_country_2026.py`'s extrapolation loop
 
 *Section 6 — Output Data Integrity & Format (6a–6k):*
 - **6a.** Data quality (NaN, negatives, spatial sanity)
@@ -511,7 +517,11 @@ Also update `EI_XLSX` filename and any sheet skipfooter values if the spreadshee
 yr_ei = 2025       # ← last year of EI data
 yr_final = 2026    # ← final extrapolation year
 ```
-Cement and flaring ratios are loaded automatically from `processed_inputs/` — no manual updates needed.
+Also update the assumed growth rates in step 3a′ of `main()` for the new beyond-EI year (2026):
+```python
+_assumed_2025 = {"gas": 1.025, "oil": 1.025, "coal": 1.01, "flaring": 1.01}
+```
+Rename this variable and adjust rates based on current projections. Cement and flaring ratios are loaded automatically from `processed_inputs/`.
 
 **In `post_process_2027.py` (configuration section near top):**
 ```python
@@ -551,6 +561,6 @@ python post_process_2027.py
 ```bash
 mv ff_country_2026b.py ingest_2026b.py archive/
 mv outputs/ff_monthly_2026b_py.npz archive/outputs/
-mv processed_inputs/fracarr_2026b.npz archive/processed_inputs/
+mv processed_inputs/edgar_patterns.npz archive/processed_inputs/
 # Keep outputs/ash_ff_2026b.nc for comparison by the new verify notebook
 ```

@@ -16,7 +16,7 @@ Outputs:
   processed_inputs/USGS_cement_2026.csv
   processed_inputs/USGS_cement_ratios_2020-2026.csv
   processed_inputs/EDGAR_fluxes.nc
-  processed_inputs/fracarr_2026.npz
+  processed_inputs/edgar_patterns.npz
 """
 
 import json
@@ -564,19 +564,20 @@ def main():
     fractional_changes = (
         EI_combined[[LAST_CDIAC_YEAR - 1] + EI_EXTRAP_YEARS]
         .stack().unstack(level=1)
-        .groupby(level='Nation').pct_change()
+        .groupby(level='Nation').pct_change(fill_method=None)
         .drop(labels=LAST_CDIAC_YEAR - 1, level=1)
         .replace([np.inf, -np.inf], np.nan) + 1
-    )
-    global_fractional_changes = global_EI.T.pct_change().T[EI_EXTRAP_YEARS].T + 1
+    ).astype(float)
+    global_fractional_changes = global_EI.T.pct_change(fill_method=None).T[EI_EXTRAP_YEARS].T + 1
 
     for nation in fractional_changes.index.get_level_values('Nation').unique():
-        fractional_changes.loc[[nation]] = pd.concat(
-            {nation: fractional_changes.loc[nation].fillna(global_fractional_changes)}, names=['Nation'])
+        filled = fractional_changes.loc[nation].fillna(global_fractional_changes)
+        fractional_changes.loc[nation] = filled.values
 
     fractional_changes['gas'].unstack().drop(['Ussr']).to_csv('processed_inputs/EI_frac_changes_2020-2024_gas.csv')
     fractional_changes['coal'].unstack().drop(['Ussr']).to_csv('processed_inputs/EI_frac_changes_2020-2024_coal.csv')
     fractional_changes['oil'].unstack().drop(['Ussr']).to_csv('processed_inputs/EI_frac_changes_2020-2024_oil.csv')
+    fractional_changes['flaring'].unstack().drop(['Ussr'], errors='ignore').to_csv('processed_inputs/EI_frac_changes_2020-2024_flaring.csv')
 
     n_expected = CDIAC_national.index.get_level_values('Nation').nunique()
     for fuel in ['gas', 'coal', 'oil', 'flaring']:
@@ -657,7 +658,10 @@ def main():
     # ─────────────────────────────────────────────────────────────────────────
     print("8. EDGAR (sector-specific spatial patterns) ...")
 
-    grid_01x01 = xe.util.grid_global(.1, .1, cf=True)
+    import warnings as _w
+    with _w.catch_warnings():
+        _w.filterwarnings('ignore', message='.*cannot be divided by.*', category=UserWarning)
+        grid_01x01 = xe.util.grid_global(.1, .1, cf=True)
     grid_01x01_areas = xr.DataArray(
         xe.util.cell_area(grid_01x01, earth_radius=EARTH_RADIUS).to_numpy(),
         dims=['lat', 'lon']).pint.quantify('km^2')
@@ -698,10 +702,10 @@ def main():
     fracarr_sectors = np.stack(
         [pat_combust, pat_pro, pat_nmm], axis=-1)           # (n_years, 180, 360, 3)
     fracarr_sectors = fracarr_sectors.transpose((1, 2, 0, 3))  # (180, 360, n_years, 3)
-    np.savez_compressed('processed_inputs/fracarr_2026.npz',
+    np.savez_compressed('processed_inputs/edgar_patterns.npz',
                         fracarr=fracarr_sectors,
                         totals=pat_totals.transpose((1, 2, 0)))
-    print(f"  Saved fracarr_2026.npz: fracarr={fracarr_sectors.shape} "
+    print(f"  Saved edgar_patterns.npz: fracarr={fracarr_sectors.shape} "
           f"(combustion/flaring/cement), totals={(180, 360, num_years)}")
 
     # ─────────────────────────────────────────────────────────────────────────

@@ -6,9 +6,9 @@ in Gg C yr⁻¹:
 
 1. **CDIAC country totals** (1993–2022): annual national emissions broken
    into gas, liquid, solid, flaring, and cement sectors.
-2. **EI fractional changes** (2023–2024): year-over-year ratios that
-   extrapolate each country × fuel-type forward from CDIAC's last year.
-   Years beyond EI coverage are held flat.
+2. **EI fractional changes** (2023–2024): per-country year-over-year ratios
+   for gas, oil, coal, and flaring that extrapolate each country forward
+   from CDIAC's last year.  Years beyond EI coverage are held flat.
 3. **EDGAR v8.0 spatial patterns** (1×1°): within-country fractions that
    distribute each nation's total across grid cells.
 
@@ -26,7 +26,7 @@ Inputs  (relative to working directory)::
     processed_inputs/EI_frac_changes_2020-2024_global_{gas,oil,coal}.csv
     processed_inputs/USGS_cement_ratios_2020-2026.csv
     processed_inputs/USGS_cement_2026.csv
-    processed_inputs/fracarr_2026.npz
+    processed_inputs/edgar_patterns.npz
     inputs/COUNTRY1X1.CODE.mod2.2013.csv
     inputs/COUNTRY1X1.1993.mod.txt
     inputs/emis_mon_usatotal_2col.txt
@@ -421,7 +421,7 @@ def _load_edgar_patterns(
     fracarr_totals : ``(n_total_yrs, 360, 180)``
         TOTALS pattern (used for bunker-fuel distribution).
     """
-    data = np.load("processed_inputs/fracarr_2026.npz")
+    data = np.load("processed_inputs/edgar_patterns.npz")
     fracarr = data["fracarr"].transpose((2, 0, 1, 3))  # (180,360,yrs,3) → (yrs,180,360,3)
     # Swap lat/lon: file is (180,360) = (lat,lon), we need (360,180) = (lon,lat)
     fracarr = fracarr.transpose((0, 2, 1, 3))           # (yrs,360,180,3)
@@ -440,14 +440,13 @@ def _load_edgar_patterns(
 def _extrapolate_countries(
     country_cdiac: np.ndarray,
     ei_ratios: np.ndarray,
-    frac_inc_flare: np.ndarray,
     frac_inc_cement: np.ndarray,
     n_extrap_yrs: int,
 ) -> np.ndarray:
     """Extrapolate country totals beyond CDIAC using EI and USGS ratios.
 
-    - Gas / oil / coal use per-country EI ratios (held flat beyond EI).
-    - Flaring uses *global* EI ratios (held flat beyond EI).
+    - Gas / oil / coal / flaring use per-country EI ratios (held flat
+      beyond EI).
     - Cement uses per-country USGS ratios (may cover more years than EI).
 
     Returns ``(n_total_yrs, n_countries, 6)`` — the CDIAC years
@@ -459,12 +458,9 @@ def _extrapolate_countries(
 
     addarr = np.zeros((n_extrap_yrs, n_countries, _NSECTORS))
 
-    # Fuels + flaring: EI ratios (3 years, held flat for remaining)
-    fuel_flare_ratios = np.zeros((n_ei_yrs, n_countries, 4))
-    fuel_flare_ratios[:, :, 0:3] = ei_ratios
-    fuel_flare_ratios[:, :, 3]   = frac_inc_flare[:, None]
+    # Fuels + flaring: per-country EI ratios (held flat beyond EI coverage)
     addarr[:, :, _GAS:_FLARE+1] = _cumulative_extrap(
-        base[:, _GAS:_FLARE+1], fuel_flare_ratios, n_extrap_yrs)
+        base[:, _GAS:_FLARE+1], ei_ratios, n_extrap_yrs)
 
     # Cement: USGS ratios (may span all extrap years)
     addarr[:, :, _CEM] = _cumulative_extrap(
@@ -726,9 +722,9 @@ def main() -> None:
     n_cdiac_yrs  = yr_cdiac - yr_start + 1     # 29
     n_extrap_yrs = yr_final - yr_cdiac         # 4
     n_total_yrs  = n_cdiac_yrs + n_extrap_yrs  # 33
-    fuels        = ["gas", "oil", "coal"]
+    fuels        = ["gas", "oil", "coal", "flaring"]
 
-    # EI flaring volumes (BCM) — read from ingest output instead of hardcoding
+    # EI flaring volumes (BCM) — global ratios still needed for _extrapolate_global
     _flaring_bcm = pd.read_csv('processed_inputs/EI_flaring_bcm.csv', index_col='Year')
     flaring = _flaring_bcm.loc[yr_cdiac:yr_ei, 'BCM'].values
     assert len(flaring) == n_ei_yrs + 1, (
@@ -753,6 +749,17 @@ def main() -> None:
     ei_ratios = _load_ei_country_ratios(
         yr_cdiac, yr_ei, n_ei_yrs, n_countries, fuels)
 
+    # ── 3a′. Assumed 2025 growth rates (beyond EI coverage) ───────────
+    #   Oil +2.5%, Gas +2.5%, Coal +1%, Flaring +1%
+    _assumed_2025 = {"gas": 1.025, "oil": 1.025, "coal": 1.01, "flaring": 1.01}
+    _extra_country = np.ones((1, n_countries, len(fuels)))
+    for _fi, _f in enumerate(fuels):
+        _extra_country[0, :, _fi] = _assumed_2025[_f]
+    ei_ratios = np.concatenate([ei_ratios, _extra_country], axis=0)
+    frac_inc_flare = np.append(frac_inc_flare, 1.01)
+    n_ei_yrs += 1
+    print(f"  Appended assumed 2025 rates: {_assumed_2025}")
+
     # ── 3b. Load USGS cement ratios (per-country) ────────────────────────
     print("Reading USGS cement ratios …")
     frac_inc_cement, frac_inc_cement_global = _load_cement_ratios(
@@ -769,7 +776,7 @@ def main() -> None:
     # ── 6. Extrapolate countries through yr_final ────────────────────────
     print("Extrapolating country data …")
     country_all = _extrapolate_countries(
-        country_cdiac, ei_ratios, frac_inc_flare, frac_inc_cement,
+        country_cdiac, ei_ratios, frac_inc_cement,
         n_extrap_yrs)
 
     # ── 7. Distribute country totals onto the 1×1° grid ─────────────────
@@ -780,7 +787,9 @@ def main() -> None:
 
     # ── 8. Add bunker fuels over ocean ───────────────────────────────────
     print("Computing bunker fuels …")
-    ei_glob_ratios = _load_ei_global_ratios(n_ei_yrs, fuels)
+    ei_glob_ratios = _load_ei_global_ratios(n_ei_yrs - 1, ["gas", "oil", "coal"])
+    _extra_glob = np.array([[_assumed_2025["gas"], _assumed_2025["oil"], _assumed_2025["coal"]]])
+    ei_glob_ratios = np.concatenate([ei_glob_ratios, _extra_glob], axis=0)
     glob_all = _extrapolate_global(
         glob_cdiac, ei_glob_ratios, frac_inc_flare, frac_inc_cement_global,
         n_cdiac_yrs, n_extrap_yrs)
