@@ -34,7 +34,7 @@ MONOLITHIC = "outputs/ash_ff_2026.nc"
 CT_DIR     = "outputs/ct"
 CT_PREFIX  = "flux1x1_ff"
 VAR_NAME   = "fossil_imp"
-SOURCE_STRING = ("Miller FF 2026, 1993 country bounds. "
+SOURCE_STRING = ("Miller-Pera FF 2026, 1993 country bounds. "
                  "CDIAC-AppState 2021; EI 2025; EDGAR 2025 GHG; "
                  "USGS MCS Cement 2025")
 
@@ -138,7 +138,7 @@ def build_carbontracker_dataset(ds_in):
             f"Created on {datetime.now(timezone.utc).isoformat()}\n"
             f"by script {os.path.basename(__file__)}"
         ),
-        "Source": f"John Miller (Ash) fossil fuel emissions estimate — {SOURCE_STRING}",
+        "Source": f"Miller-Pera fossil fuel emissions estimate — {SOURCE_STRING}",
     }
 
     return ds

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ingest_2026.py — Ingest and process raw input data for the Miller FF pipeline.
+ingest_2026.py — Ingest and process raw input data for the Miller-Pera FF pipeline.
 
 Reads CDIAC, EI, USGS, and EDGAR source files and writes processed CSVs and
 NetCDF to processed_inputs/ for consumption by ff_country_2026.py.
@@ -12,6 +12,7 @@ Outputs:
   processed_inputs/EI_frac_changes_2020-2024_global_{oil,gas,coal}.csv
   processed_inputs/EI_national_2024.csv
   processed_inputs/EI_frac_changes_2020-2024_{gas,coal,oil}.csv
+  processed_inputs/EI_flaring_bcm.csv
   processed_inputs/USGS_cement_2026.csv
   processed_inputs/USGS_cement_ratios_2020-2026.csv
   processed_inputs/EDGAR_fluxes.nc
@@ -25,9 +26,12 @@ from itertools import product
 
 import numpy as np
 import pandas as pd
+pd.set_option('future.no_silent_downcasting', True)
 import xarray as xr
 from xarray import open_mfdataset
 import pint  # noqa: F401 — must be imported before pint_xarray
+
+from country_names import load_canonical, load_aliases, validate_names
 import pint_xarray  # noqa: F401
 import cf_xarray as cfxr  # noqa: F401 — not side-effect free
 import cf_xarray.units
@@ -42,12 +46,12 @@ xr.set_options(keep_attrs=True)
 # =============================================================================
 
 STARTING_YEAR    = 1993
-LAST_CDIAC_YEAR  = 2021
+LAST_CDIAC_YEAR  = 2022
 LAST_EI_YEAR     = 2024
 EARTH_RADIUS     = 6371.009  # km, John Miller's value
 
-CDIAC_GLOBAL_XLSX   = 'inputs/CDIAC/global.1751_2021.xlsx'
-CDIAC_NATIONAL_XLSX = 'inputs/CDIAC/nation.1751_2021.xlsx'
+CDIAC_GLOBAL_XLSX   = 'inputs/CDIAC/global.1750_2022.xlsx'
+CDIAC_NATIONAL_XLSX = 'inputs/CDIAC/nation.1750_2022.xlsx'
 EI_XLSX             = 'inputs/EI-Stats-Review-ALL-data-2025.xlsx'
 EDGAR_NCS           = 'inputs/TOTALS_flx_nc_2025_GHG/*.nc'
 EDGAR_NMM_NCS       = 'inputs/NMM_flx_nc_2025_GHG/*.nc'
@@ -67,24 +71,12 @@ OUTPUT_COLS = [
 # Lookup tables
 # =============================================================================
 
-# CDIAC nation name normalisation
-CDIAC_RENAMING = {
-    'PLURINATIONAL STATE OF BOLIVIA': 'BOLIVIA',
-    'HONG KONG SPECIAL ADMINSTRATIVE REGION OF CHINA': 'HONG KONG',
-    'CHINA (MAINLAND)': 'CHINA',
-    'MYANMAR (FORMERLY BURMA)': 'MYANMAR',
-    'BRUNEI (DARUSSALAM)': 'BRUNEI',
-    'DEMOCRATIC REPUBLIC OF THE CONGO (FORMERLY ZAIRE)': 'DEMOCRATIC REPUBLIC OF THE CONGO',
-    'FALKLAND ISLANDS (MALVINAS)': 'FALKLAND ISLANDS',
-    'FRANCE (INCLUDING MONACO)': 'FRANCE',
-    'LAO PEOPLE S DEMOCRATIC REPUBLIC': 'LAOS',
-    'LIBYAN ARAB JAMAHIRIYAH': 'LIBYA',
-    'RUSSIAN FEDERATION': 'RUSSIA',
-    'SYRIAN ARAB REPUBLIC': 'SYRIA',
-    'VIET NAM': 'VIETNAM',
-    'YUGOSLAVIA (MONTENEGRO & SERBIA)': 'YUGOSLAVIA',
-    'YUGOSLAVIA (FORMER SOCIALIST FEDERAL REPUBLIC)': 'YUGOSLAVIA',
-}
+# Country name aliases — loaded from inputs/country_aliases.json
+# (see also inputs/canonical_countries.csv for the 189 canonical names)
+CANONICAL_COUNTRIES = load_canonical()
+CANONICAL_SET = set(CANONICAL_COUNTRIES)
+
+CDIAC_RENAMING = load_aliases('CDIAC_2022')
 
 # These countries use "REPUBLIC OF ..." names which would change list alphabetization
 # if renamed: REPUBLIC OF CAMEROON, REPUBLIC OF MOLDOVA, UNITED REPUBLIC OF TANZANIA
@@ -96,13 +88,14 @@ AGGREGATING_LIST = {
     'CANADA': ['CANADA', 'ST. PIERRE & MIQUELON'],
     'SPAIN': ['SPAIN', 'GIBRALTAR', 'ANDORRA'],
     'VENEZUELA': ['VENEZUELA', 'ARUBA'],
-    'CHINA': ['CHINA', 'MACAU SPECIAL ADMINSTRATIVE REGION OF CHINA'],
+    'CHINA': ['CHINA', 'MACAU'],
     'YUGOSLAVIA': ['YUGOSLAVIA', 'MACEDONIA', 'CROATIA', 'BOSNIA & HERZEGOVINA',
                     'SLOVENIA', 'KOSOVO', 'SERBIA', 'MONTENEGRO'],
     'SOUTH AFRICA': ['SOUTH AFRICA', 'LESOTHO'],
     'UNITED KINGDOM': ['UNITED KINGDOM', 'ISLE OF MAN'],
     'ST. KITTS-NEVIS': ['ST. KITTS-NEVIS', 'ANGUILLA'],
-    'GERMANY': ['GERMANY', 'LIECHTENSTEIN'],  # Liechtenstein merged with Germany (no GISS grid cell of its own)
+    # Note: Liechtenstein is now combined with Switzerland in CDIAC 2022
+    # (was merged with Germany in earlier versions). Separate LIECHTENSTEIN entry is deleted.
     'SUDAN': ['REPUBLIC OF SUDAN', 'REPUBLIC OF SOUTH SUDAN'],
 }
 
@@ -112,46 +105,40 @@ DELETING_LIST = [
     'MARSHALL ISLANDS', 'FEDERATED STATES OF MICRONESIA', 'TURKS AND CAICOS ISLANDS',
     'BONAIRE, SAINT EUSTATIUS, AND SABA', 'CURACAO', 'NETHERLAND ANTILLES',
     'SAINT MARTIN (DUTCH PORTION)', 'TUVALU', 'MAYOTTE',
+    # Added for CDIAC 2022 (new entries or separate Liechtenstein now in Switzerland)
+    'AMERICAN SAMOA', 'NORTHERN MARIANA ISLANDS', 'LIECHTENSTEIN',
+    'SAINT BARTHÉLEMY', 'SAINT MARTIN (FRENCH PART)',
 ]
 
+# Expanded set: canonical names + aggregation members + deleted countries (all Title Case).
+# Used to validate EI region JSONs, which reference pre-aggregation country names.
+CANONICAL_EXPANDED = CANONICAL_SET | {
+    m.title() for members in AGGREGATING_LIST.values() for m in members
+} | {d.title() for d in DELETING_LIST}
+
 CDIAC_NATIONAL_COL_RENAMES = {
-    'Total CO2 emissions from fossil-fuels and cement production (thousand metric tons of C)': 'total (Gg C)',
+    'Emissions from fossil fuels and cement production (thousand metric tons of C)': 'total (Gg C)',
     'Emissions from solid fuel consumption': 'solid_fuel (Gg C)',
     'Emissions from liquid fuel consumption': 'liquid_fuel (Gg C)',
     'Emissions from gas fuel consumption': 'gas_fuel (Gg C)',
     'Emissions from cement production': 'cement (Gg C)',
     'Emissions from gas flaring': 'flaring (Gg C)',
-    'Per capita CO2 emissions (metric tons of carbon)': 'per_capita',
+    'Emissions per capita (metric tons of carbon)': 'per_capita',
     'Emissions from bunker fuels (not included in the totals)': 'bunker (Gg C)',
 }
 
 # CDIAC version notes:
-# - 2013: added Bonaire/St. Eustatius/Saba, Curacao, Liechtenstein, Neth. Antilles,
+# - 2013: added Bonaire/St. Eustatius/Saba, Curacao, Neth. Antilles,
 #   St. Martin (Dutch) — incomplete records from 1992–2013.
 # - 2014: added Tuvalu.
-# - Liechtenstein has CDIAC data through 2017; merged with Germany (shares GISS grid cell).
-# - Liechtenstein, Neth. Antilles, Turks & Caicos, Tuvalu have GISS codes but are
+# - 2022: Liechtenstein combined with Switzerland; many country names changed
+#   (see CDIAC_RENAMING); Sudan split into pre/post-2011 entries.
+# - Neth. Antilles, Turks & Caicos, Tuvalu have GISS codes but are
 #   in DELETING_LIST (too small / incomplete records).
 
-EI_RENAMING = {
-    'China Hong Kong SAR': 'Hong Kong',
-    'Iran': 'Islamic Republic Of Iran',
-    'Republic of Ireland': 'Ireland',
-    'South Korea': 'Republic Of Korea',
-    'US': 'United States Of America',
-    'Trinidad & Tobago': 'Trinidad And Tobago',
-    'Italy': 'Italy (Including San Marino)',
-    'Russian Federation': 'Russia',
-    'Brunei (Darussalam)': 'Brunei',
-    'Democratic Republic Of The Congo (Formerly Zaire)': 'Democratic Republic Of The Congo',
-    'Falkland Islands (Malvinas)': 'Falkland Islands',
-    'North Macedonia': 'Macedonia',
-}
+EI_RENAMING = load_aliases('EI_2024')
 
-USGS_RENAMES = {
-    'United States (includes Puerto Rico)': 'United States Of America',
-    'Korea Republic of': 'Republic of Korea',
-}
+USGS_RENAMES = load_aliases('USGS_2026')
 
 
 # =============================================================================
@@ -258,13 +245,13 @@ def main():
     CDIAC_global = pd.read_excel(CDIAC_GLOBAL_XLSX, sheet_name='Sheet1')
     CDIAC_global = CDIAC_global[CDIAC_global['Year'] >= STARTING_YEAR].set_index('Year')
     CDIAC_global_col_renames = {
-        'Total carbon emissions from fossil fuel consumption and cement production (million metric tons of C)': 'total (Tg C)',
-        'Carbon emissions from solid fuel consumption': 'solid_fuel (Tg C)',
-        'Carbon emissions from liquid fuel consumption': 'liquid_fuel (Tg C)',
-        'Carbon emissions from gas fuel consumption': 'gas_fuel (Tg C)',
-        'Carbon emissions from cement production': 'cement (Tg C)',
-        'Carbon emissions from gas flaring': 'flaring (Tg C)',
-        'Per capita carbon emissions (metric tons of carbon; after 1949 only)': 'per_capita (Mg C)',
+        'Emissions from fossil fuels and cement production (million metric tons of C)': 'total (Tg C)',
+        'Emissions from solid fuel consumption': 'solid_fuel (Tg C)',
+        'Emissions from liquid fuel consumption': 'liquid_fuel (Tg C)',
+        'Emissions from gas fuel consumption': 'gas_fuel (Tg C)',
+        'Emissions from cement production': 'cement (Tg C)',
+        'Emissions from gas flaring': 'flaring (Tg C)',
+        'Emissions per capita (metric tons of carbon)': 'per_capita (Mg C)',
     }
     CDIAC_global.rename(CDIAC_global_col_renames, axis='columns', inplace=True)
 
@@ -283,7 +270,9 @@ def main():
     # 2. CDIAC national
     # ─────────────────────────────────────────────────────────────────────────
     print("2. CDIAC national ...")
-    CDIAC_national = pd.read_excel(CDIAC_NATIONAL_XLSX, sheet_name='Sheet1').set_index(['Nation', 'Year'])
+    CDIAC_national = pd.read_excel(CDIAC_NATIONAL_XLSX, sheet_name='Sheet1')
+    CDIAC_national['Nation'] = CDIAC_national['Nation'].str.upper()
+    CDIAC_national = CDIAC_national.set_index(['Nation', 'Year'])
 
     # give countries+cols more standard names
     CDIAC_national.rename(CDIAC_RENAMING, level=0, inplace=True)
@@ -303,10 +292,11 @@ def main():
     CDIAC_national = CDIAC_national[CDIAC_national['Year'] >= STARTING_YEAR]
     CDIAC_national.set_index(['Nation', 'Year'], inplace=True)
 
-    # French departments are missing values for 2011-2014, so interpolate
+    # French departments have no CDIAC data after 2010 — insert NaN rows so
+    # the per-nation interpolation can fill them (extrapolate from 2010 trend)
     for department, year in product(
         ['French Guiana', 'Guadeloupe', 'Martinique', 'Reunion'],
-        [2011, 2012, 2013, 2014],
+        range(2011, LAST_CDIAC_YEAR + 1),
     ):
         CDIAC_national.loc[(department, year), :] = np.nan
     CDIAC_national.sort_index(axis='index', inplace=True)
@@ -328,10 +318,11 @@ def main():
         for col, n in _nan_before[_nan_before > 0].items():
             print(f"    {col}: {n} rows — {_nan_nations[col]}")
 
-    # interpolate within each nation only
+    # interpolate within each nation only (ffill handles trailing NaN, e.g. French
+    # departments that only have CDIAC data through 2010)
     for nation in CDIAC_national.index.get_level_values('Nation').unique():
         CDIAC_national.loc[[nation]] = pd.concat(
-            {nation: CDIAC_national.loc[nation].interpolate()}, names=['Nation'])
+            {nation: CDIAC_national.loc[nation].interpolate().ffill()}, names=['Nation'])
 
     # Fix rows where the reported total doesn't match the sector sum.
     # This arises when a sector (commonly flaring) was NaN in the raw xlsx and
@@ -355,6 +346,11 @@ def main():
     CDIAC_national_filled = CDIAC_national.fillna(0)
     CDIAC_national_filled.to_csv('processed_inputs/CDIAC_national_2020.csv', columns=OUTPUT_COLS)
     CDIAC_countries.to_csv('processed_inputs/CDIAC_countries.csv', columns=[], header=False)
+
+    # --- validate against canonical country list ---
+    validate_names('CDIAC', set(CDIAC_countries), CANONICAL_SET, strict=True)
+    assert CDIAC_countries.tolist() == CANONICAL_COUNTRIES, \
+        "CDIAC country order differs from canonical list"
 
     # --- validation ---
     n_nations = CDIAC_national.index.get_level_values('Nation').nunique()
@@ -416,6 +412,14 @@ def main():
     (global_oil.pct_change() + 1).dropna().to_csv('processed_inputs/EI_frac_changes_2020-2024_global_oil.csv', index=False)
     (global_gas.pct_change() + 1).dropna().to_csv('processed_inputs/EI_frac_changes_2020-2024_global_gas.csv', index=False)
     (global_coal.pct_change() + 1).dropna().to_csv('processed_inputs/EI_frac_changes_2020-2024_global_coal.csv', index=False)
+
+    # Global flaring volumes in BCM (billions of cubic metres) — used by
+    # ff_country_2026.py for flaring-sector extrapolation ratios.
+    global_flaring_bcm = _read_ei_global('Natural Gas Flaring', 13)
+    global_flaring_bcm.to_csv('processed_inputs/EI_flaring_bcm.csv',
+                              header=['BCM'], index_label='Year')
+    print(f"  Flaring BCM: {len(global_flaring_bcm)} years written")
+
     print(f"  {len(global_EI)} fuel-years")
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -435,6 +439,8 @@ def main():
 
     with open('inputs/EI_2024_flaring_regions.json') as f:
         EI_flaring_regions = json.load(f)
+    for members in EI_flaring_regions.values():
+        validate_names('EI flaring regions JSON', set(members), CANONICAL_EXPANDED)
 
     for EI_label, region_countries in EI_flaring_regions.items():
         for country in region_countries:
@@ -481,6 +487,8 @@ def main():
     # NOTE: Afghanistan moved to 'Other Asia Pacific', in accordance with EI Definitions tab
     with open('inputs/EI_2024_fuel_regions.json') as f:
         EI_fuel_regions = json.load(f)
+    for members in EI_fuel_regions.values():
+        validate_names('EI fuel regions JSON', set(members), CANONICAL_EXPANDED)
 
     # checks that countries are appropriately represented in CDIAC, EI, and regions
     all_extras = []
@@ -547,6 +555,11 @@ def main():
         columns={'coal': 'coal (EJ)', 'flaring': 'flaring (TG CO2)', 'oil': 'oil (EJ)', 'gas': 'gas (EJ)'})
     EI_csv.to_csv('processed_inputs/EI_national_2024.csv')
 
+    # validate EI country names against canonical list
+    # (Ussr is a historical EI entry dropped in ratio calculations)
+    ei_nations = set(EI_csv.index.get_level_values('Nation').unique()) - {'Ussr'}
+    validate_names('EI', ei_nations, CANONICAL_SET)
+
     # ratios for extrapolation
     fractional_changes = (
         EI_combined[[LAST_CDIAC_YEAR - 1] + EI_EXTRAP_YEARS]
@@ -596,6 +609,11 @@ def main():
     total_cement = total_cement.reset_index().drop_duplicates(
         subset=['Nation', 'Year'], keep='last').set_index(['Nation', 'Year']).sort_index()
     total_cement.to_csv('./processed_inputs/USGS_cement_2026.csv')
+
+    # validate USGS country names against canonical list
+    usgs_skip = {'Other countries', 'Other countries (rounded)', 'World total (rounded)'}
+    usgs_nations = set(total_cement.index.get_level_values('Nation').unique()) - usgs_skip
+    validate_names('USGS', usgs_nations, CANONICAL_SET)
 
     cement_ratios = total_cement.drop(columns='Clinker').drop(labels='World total (rounded)').stack().unstack(level='Year')
 

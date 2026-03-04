@@ -53,7 +53,7 @@ YR1           = 1993                   # first year in data
 YR3           = 2025                   # last year in data
 EARTH_RADIUS  = 6371.009              # km  (John Miller's value)
 C_MOLAR_MASS  = 12.011                # g/mol
-SOURCE_STRING = ("Miller FF 2026, 1993 country bounds. "
+SOURCE_STRING = ("Miller-Pera FF 2026, 1993 country bounds. "
                  "CDIAC-AppState 2021; EI 2025; EDGAR 2025 GHG; "
                  "USGS MCS Cement 2025")
 
@@ -92,7 +92,7 @@ def main():
                   f"by {os.path.basename(__file__)}")
 
     global_attrs = {
-        "title":       "Miller Fossil Fuel CO2 prior estimates for CarbonTracker",
+        "title":       "Miller-Pera Fossil Fuel CO2 prior estimates for CarbonTracker",
         "source":      SOURCE_STRING,
         "history":     f"Created by ff_country_2026.py + {os.path.basename(__file__)}\n{provenance}",
         "institution": "NOAA Global Monitoring Laboratory",

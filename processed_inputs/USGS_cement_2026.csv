@@ -192,54 +192,54 @@ Indonesia,2022,64000,79000
 Indonesia,2023,67000,79000
 Indonesia,2024,68000,79000
 Indonesia,2025,64000,83000
-Iran,2000,20000,26000
-Iran,2001,26650,30000
-Iran,2002,30000,30000
-Iran,2003,30000,33000
-Iran,2004,30000,33000
-Iran,2005,32700,34000
-Iran,2006,33000,35000
-Iran,2007,36000,35000
-Iran,2008,44400,36000
-Iran,2009,50000,50000
-Iran,2010,50000,57000
-Iran,2011,61000,70000
-Iran,2012,70000,75000
-Iran,2013,72000,80000
-Iran,2014,65000,78600
-Iran,2015,58600,79000
-Iran,2016,55000,79000
-Iran,2017,54000,80000
-Iran,2018,58000,80000
-Iran,2019,60000,81000
-Iran,2020,68000,81000
-Iran,2021,62000,81000
-Iran,2022,59000,81000
-Iran,2023,71000,81000
-Iran,2024,71000,85000
-Iran,2025,68000,85000
-Italy,1994,40000,45000
-Italy,1995,35000,45000
-Italy,1996,34000,45700
-Italy,1997,33721,45700
-Italy,1998,35000,46000
-Italy,1999,36000,46000
-Italy,2000,36000,46000
-Italy,2001,39804,46000
-Italy,2002,40000,46000
-Italy,2003,38000,46000
-Italy,2004,38000,46000
-Italy,2005,46400,46000
-Italy,2006,43200,46000
-Italy,2007,47500,46000
-Italy,2008,43000,46000
-Italy,2009,36300,46000
-Italy,2010,36300,46000
-Italy,2011,33100,46000
-Italy,2012,33000,46000
-Italy,2013,22000,46000
-Italy,2014,22000,46000
-Italy,2015,23000,46000
+Islamic Republic Of Iran,2000,20000,26000
+Islamic Republic Of Iran,2001,26650,30000
+Islamic Republic Of Iran,2002,30000,30000
+Islamic Republic Of Iran,2003,30000,33000
+Islamic Republic Of Iran,2004,30000,33000
+Islamic Republic Of Iran,2005,32700,34000
+Islamic Republic Of Iran,2006,33000,35000
+Islamic Republic Of Iran,2007,36000,35000
+Islamic Republic Of Iran,2008,44400,36000
+Islamic Republic Of Iran,2009,50000,50000
+Islamic Republic Of Iran,2010,50000,57000
+Islamic Republic Of Iran,2011,61000,70000
+Islamic Republic Of Iran,2012,70000,75000
+Islamic Republic Of Iran,2013,72000,80000
+Islamic Republic Of Iran,2014,65000,78600
+Islamic Republic Of Iran,2015,58600,79000
+Islamic Republic Of Iran,2016,55000,79000
+Islamic Republic Of Iran,2017,54000,80000
+Islamic Republic Of Iran,2018,58000,80000
+Islamic Republic Of Iran,2019,60000,81000
+Islamic Republic Of Iran,2020,68000,81000
+Islamic Republic Of Iran,2021,62000,81000
+Islamic Republic Of Iran,2022,59000,81000
+Islamic Republic Of Iran,2023,71000,81000
+Islamic Republic Of Iran,2024,71000,85000
+Islamic Republic Of Iran,2025,68000,85000
+Italy (Including San Marino),1994,40000,45000
+Italy (Including San Marino),1995,35000,45000
+Italy (Including San Marino),1996,34000,45700
+Italy (Including San Marino),1997,33721,45700
+Italy (Including San Marino),1998,35000,46000
+Italy (Including San Marino),1999,36000,46000
+Italy (Including San Marino),2000,36000,46000
+Italy (Including San Marino),2001,39804,46000
+Italy (Including San Marino),2002,40000,46000
+Italy (Including San Marino),2003,38000,46000
+Italy (Including San Marino),2004,38000,46000
+Italy (Including San Marino),2005,46400,46000
+Italy (Including San Marino),2006,43200,46000
+Italy (Including San Marino),2007,47500,46000
+Italy (Including San Marino),2008,43000,46000
+Italy (Including San Marino),2009,36300,46000
+Italy (Including San Marino),2010,36300,46000
+Italy (Including San Marino),2011,33100,46000
+Italy (Including San Marino),2012,33000,46000
+Italy (Including San Marino),2013,22000,46000
+Italy (Including San Marino),2014,22000,46000
+Italy (Including San Marino),2015,23000,46000
 Japan,1994,91500,93000
 Japan,1995,90474,97500
 Japan,1996,94492,97032
@@ -341,38 +341,38 @@ Pakistan,2012,32000,42500
 Pakistan,2013,31000,43400
 Pakistan,2014,32000,44000
 Pakistan,2015,32000,44000
-Republic of Korea,1994,52100,45000
-Republic of Korea,1995,55130,57000
-Republic of Korea,1996,57334,55800
-Republic of Korea,1997,59796,55800
-Republic of Korea,1998,46791,57000
-Republic of Korea,1999,48157,57000
-Republic of Korea,2000,51255,62000
-Republic of Korea,2001,52012,58000
-Republic of Korea,2002,55500,62000
-Republic of Korea,2003,59200,62000
-Republic of Korea,2004,53900,62000
-Republic of Korea,2005,51400,62000
-Republic of Korea,2006,55000,62000
-Republic of Korea,2007,57000,62000
-Republic of Korea,2008,53900,62000
-Republic of Korea,2009,50100,50000
-Republic of Korea,2010,47200,50000
-Republic of Korea,2011,48300,50000
-Republic of Korea,2012,48000,50000
-Republic of Korea,2013,47300,50000
-Republic of Korea,2014,63200,50000
-Republic of Korea,2015,51700,50000
-Republic of Korea,2016,57000,50000
-Republic of Korea,2017,56500,50000
-Republic of Korea,2018,57500,50000
-Republic of Korea,2019,50000,50000
-Republic of Korea,2020,48000,50000
-Republic of Korea,2021,50000,62000
-Republic of Korea,2022,51000,62000
-Republic of Korea,2023,51000,62000
-Republic of Korea,2024,44000,62000
-Republic of Korea,2025,37000,62000
+Republic Of Korea,1994,52100,45000
+Republic Of Korea,1995,55130,57000
+Republic Of Korea,1996,57334,55800
+Republic Of Korea,1997,59796,55800
+Republic Of Korea,1998,46791,57000
+Republic Of Korea,1999,48157,57000
+Republic Of Korea,2000,51255,62000
+Republic Of Korea,2001,52012,58000
+Republic Of Korea,2002,55500,62000
+Republic Of Korea,2003,59200,62000
+Republic Of Korea,2004,53900,62000
+Republic Of Korea,2005,51400,62000
+Republic Of Korea,2006,55000,62000
+Republic Of Korea,2007,57000,62000
+Republic Of Korea,2008,53900,62000
+Republic Of Korea,2009,50100,50000
+Republic Of Korea,2010,47200,50000
+Republic Of Korea,2011,48300,50000
+Republic Of Korea,2012,48000,50000
+Republic Of Korea,2013,47300,50000
+Republic Of Korea,2014,63200,50000
+Republic Of Korea,2015,51700,50000
+Republic Of Korea,2016,57000,50000
+Republic Of Korea,2017,56500,50000
+Republic Of Korea,2018,57500,50000
+Republic Of Korea,2019,50000,50000
+Republic Of Korea,2020,48000,50000
+Republic Of Korea,2021,50000,62000
+Republic Of Korea,2022,51000,62000
+Republic Of Korea,2023,51000,62000
+Republic Of Korea,2024,44000,62000
+Republic Of Korea,2025,37000,62000
 Russia,1994,50000,140000
 Russia,1995,36400,80000
 Russia,1996,27800,67500

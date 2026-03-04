@@ -1,0 +1,189 @@
+Afghanistan
+Albania
+Algeria
+Angola
+Antigua & Barbuda
+Argentina
+Armenia
+Australia
+Austria
+Azerbaijan
+Bahamas
+Bahrain
+Bangladesh
+Barbados
+Belarus
+Belgium
+Belize
+Benin
+Bermuda
+Bhutan
+Bolivia
+Botswana
+Brazil
+Brunei
+Bulgaria
+Burkina Faso
+Burundi
+Cambodia
+Canada
+Cape Verde
+Central African Republic
+Chad
+Chile
+China
+Colombia
+Comoros
+Congo
+Cook Islands
+Costa Rica
+Cote D Ivoire
+Cuba
+Cyprus
+Czech Republic
+Democratic People S Republic Of Korea
+Democratic Republic Of The Congo
+Denmark
+Djibouti
+Dominica
+Dominican Republic
+Ecuador
+Egypt
+El Salvador
+Equatorial Guinea
+Estonia
+Ethiopia
+Faeroe Islands
+Falkland Islands
+Fiji
+Finland
+France
+French Guiana
+French Polynesia
+Gabon
+Gambia
+Georgia
+Germany
+Ghana
+Greece
+Greenland
+Grenada
+Guadeloupe
+Guatemala
+Guinea
+Guinea Bissau
+Guyana
+Haiti
+Honduras
+Hong Kong
+Hungary
+Iceland
+India
+Indonesia
+Iraq
+Ireland
+Islamic Republic Of Iran
+Israel
+Italy (Including San Marino)
+Jamaica
+Japan
+Jordan
+Kazakhstan
+Kenya
+Kiribati
+Kuwait
+Kyrgyzstan
+Laos
+Latvia
+Lebanon
+Liberia
+Libya
+Lithuania
+Luxembourg
+Madagascar
+Malawi
+Malaysia
+Maldives
+Mali
+Malta
+Martinique
+Mauritania
+Mauritius
+Mexico
+Mongolia
+Morocco
+Mozambique
+Myanmar
+Namibia
+Nauru
+Nepal
+Netherlands
+New Caledonia
+New Zealand
+Nicaragua
+Niger
+Nigeria
+Norway
+Oman
+Pakistan
+Panama
+Papua New Guinea
+Paraguay
+Peru
+Philippines
+Poland
+Portugal
+Qatar
+Republic Of Cameroon
+Republic Of Korea
+Republic Of Moldova
+Reunion
+Romania
+Russia
+Rwanda
+Saint Lucia
+Samoa
+Sao Tome & Principe
+Saudi Arabia
+Senegal
+Seychelles
+Sierra Leone
+Singapore
+Slovakia
+Solomon Islands
+Somalia
+South Africa
+Spain
+Sri Lanka
+St. Kitts-Nevis
+St. Vincent & The Grenadines
+Sudan
+Suriname
+Swaziland
+Sweden
+Switzerland
+Syria
+Taiwan
+Tajikistan
+Thailand
+Togo
+Tonga
+Trinidad And Tobago
+Tunisia
+Turkey
+Turkmenistan
+Uganda
+Ukraine
+United Arab Emirates
+United Kingdom
+United Republic Of Tanzania
+United States Of America
+Uruguay
+Uzbekistan
+Vanuatu
+Venezuela
+Vietnam
+Yemen
+Yugoslavia
+Zambia
+Zimbabwe

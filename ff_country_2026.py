@@ -4,9 +4,9 @@
 Combines three data sources to produce a ``(months × lon × lat)`` field
 in Gg C yr⁻¹:
 
-1. **CDIAC country totals** (1993–2021): annual national emissions broken
+1. **CDIAC country totals** (1993–2022): annual national emissions broken
    into gas, liquid, solid, flaring, and cement sectors.
-2. **EI fractional changes** (2022–2024): year-over-year ratios that
+2. **EI fractional changes** (2023–2024): year-over-year ratios that
    extrapolate each country × fuel-type forward from CDIAC's last year.
    Years beyond EI coverage are held flat.
 3. **EDGAR v8.0 spatial patterns** (1×1°): within-country fractions that
@@ -718,7 +718,7 @@ def main() -> None:
     season   = "nam"
     seas2    = "euras"
     yr_start = 1993
-    yr_cdiac = 2021
+    yr_cdiac = 2022
     yr_ei    = 2024
     yr_final = 2025
 
@@ -728,10 +728,11 @@ def main() -> None:
     n_total_yrs  = n_cdiac_yrs + n_extrap_yrs  # 33
     fuels        = ["gas", "oil", "coal"]
 
-    # EI flaring volumes (billions m³) for 2021–2024, from:
-    # Energy Institute Statistical Review of World Energy 2025, "Gas — Flared
-    # natural gas" table (BCM column for "Total World").
-    flaring = np.array([152.7, 146.8, 157.1, 158.8])
+    # EI flaring volumes (BCM) — read from ingest output instead of hardcoding
+    _flaring_bcm = pd.read_csv('processed_inputs/EI_flaring_bcm.csv', index_col='Year')
+    flaring = _flaring_bcm.loc[yr_cdiac:yr_ei, 'BCM'].values
+    assert len(flaring) == n_ei_yrs + 1, (
+        f"Expected {n_ei_yrs + 1} flaring BCM values ({yr_cdiac}–{yr_ei}), got {len(flaring)}")
     frac_inc_flare  = flaring[1:] / flaring[:-1]
 
     # ── 1. Load CDIAC global totals ──────────────────────────────────────
