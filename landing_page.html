@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gridded Fossil-Fuel CO₂ Emission Estimates for Atmospheric Inversions</title>
+<style>
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    max-width: 900px;
+    margin: 2em auto;
+    padding: 0 1.5em;
+    line-height: 1.6;
+    color: #222;
+    background: #fff;
+  }
+  h1 {
+    font-size: 1.5em;
+    border-bottom: 2px solid #003366;
+    padding-bottom: 0.3em;
+    color: #003366;
+  }
+  h2 {
+    font-size: 1.15em;
+    color: #003366;
+    margin-top: 1.8em;
+  }
+  .citation {
+    background: #f0f4f8;
+    border-left: 4px solid #003366;
+    padding: 0.8em 1em;
+    margin: 1em 0;
+    font-style: italic;
+  }
+  .figure-container {
+    text-align: center;
+    margin: 1.5em 0;
+  }
+  .figure-container img {
+    max-width: 100%;
+    border: 1px solid #ccc;
+  }
+  .figure-caption {
+    font-size: 0.9em;
+    color: #555;
+    margin-top: 0.4em;
+  }
+  ul { padding-left: 1.5em; }
+  li { margin-bottom: 0.5em; }
+  .disclaimer {
+    margin-top: 2em;
+    padding: 1em;
+    background: #f9f9f0;
+    border: 1px solid #ddd;
+    font-size: 0.95em;
+  }
+  .contact {
+    margin-top: 1.5em;
+    font-size: 0.95em;
+  }
+  a { color: #003366; }
+</style>
+</head>
+<body>
+
+<h1>Model input, code, and output in support of gridded fossil-fuel CO&#8322; emission estimates for atmospheric inversions</h1>
+
+<p>The datasets linked here are in support of:</p>
+
+<div class="citation">
+Gridded 1&deg; &times; 1&deg; monthly fossil-fuel CO&#8322; emission estimates (1993&ndash;2025) for use as prior fluxes in NOAA GML atmospheric inversion systems. Pera, Jacobson, and Miller, NOAA Global Monitoring Laboratory, 2026.
+</div>
+
+<p>This product combines national inventories from CDIAC at AppState, the Energy Institute Statistical Review, and USGS Mineral Commodity Summaries with spatial patterns from EDGAR v8.0 to produce sector-resolved, monthly gridded emissions on a global 1&deg; &times; 1&deg; grid.</p>
+
+<div class="figure-container">
+  <img src="summary_figure.png" alt="Summary figure showing global fossil-fuel CO₂ emissions: (a) global totals by fuel type 1993–2025, (b) annual growth rates, and (c) spatial distribution of 2025 mean flux with top-emitting industrial zones.">
+  <div class="figure-caption">
+    <strong>Figure:</strong> (a) Global fossil-fuel CO&#8322; emissions by fuel type, 1993&ndash;2025. (b) Year-over-year growth rate. (c) Mean 2025 fossil-fuel CO&#8322; flux with top-emitting industrial zones identified.
+  </div>
+</div>
+
+<h2>Data files and model code are contained in the following directories:</h2>
+
+<h2>code/</h2>
+<p>Python pipeline for ingesting and harmonizing inventories, gridding national emissions to 1&deg; &times; 1&deg; cells, extrapolating beyond the CDIAC record, interpolating annual totals to monthly fields, and reformatting output for CarbonTracker delivery. Also includes a Jupyter verification notebook with 90+ automated checks and a README with full methodology documentation.</p>
+
+<h2>outputs/</h2>
+<p>Monthly, gridded, 1&deg; &times; 1&deg; fossil-fuel CO&#8322; flux fields in CF-compliant netCDF format:</p>
+<ul>
+  <li><strong>ash_ff_2026.nc</strong> &mdash; Monolithic file containing all years (1993&ndash;2025) in a single dataset.</li>
+  <li><strong>ct/</strong> &mdash; CarbonTracker-format files: 33 per-year files and 396 per-month files for direct use in inversion systems.</li>
+  <li><strong>summary_figure.png</strong> &mdash; Overview figure shown above.</li>
+</ul>
+
+<h2>Input data sources</h2>
+<p>Input data are not included in this archive due to size and licensing constraints. All sources are publicly available from their respective providers:</p>
+<ul>
+  <li><strong>CDIAC at AppState</strong> (Erb &amp; Marland, 2026) &mdash; National and global annual fossil-fuel CO&#8322; emissions by fuel type (solid, liquid, gas, cement, flaring, bunker fuels), 1751&ndash;2023. Available at <a href="https://rieee.appstate.edu/projects-programs/cdiac/">https://rieee.appstate.edu/projects-programs/cdiac/</a></li>
+  <li><strong>Energy Institute Statistical Review of World Energy</strong> (2025 edition) &mdash; Year-over-year production changes by fuel type and by country, used to extrapolate national emissions beyond the CDIAC record (2024&ndash;2025). Available at <a href="https://www.energyinst.org/statistical-review">https://www.energyinst.org/statistical-review</a></li>
+  <li><strong>EDGAR v8.0</strong> (Crippa et al., 2024) &mdash; Gridded 0.1&deg; &times; 0.1&deg; sector-specific emission maps (combustion, cement, flaring) providing the spatial patterns used to distribute national totals onto the 1&deg; &times; 1&deg; grid. Available at <a href="https://edgar.jrc.ec.europa.eu/dataset_ghg2025">https://edgar.jrc.ec.europa.eu/dataset_ghg2025</a></li>
+  <li><strong>USGS Mineral Commodity Summaries &mdash; Cement</strong> &mdash; National cement production statistics used to extrapolate cement emissions beyond the CDIAC record. Available at <a href="https://www.usgs.gov/centers/national-minerals-information-center/cement-statistics-and-information">https://www.usgs.gov/centers/national-minerals-information-center/cement-statistics-and-information</a></li>
+  <li><strong>GISS Country Grid</strong> &mdash; 1&deg; &times; 1&deg; country assignment grid used to map national totals to grid cells. Available at <a href="https://data.giss.nasa.gov/landuse/country.html">https://data.giss.nasa.gov/landuse/country.html</a></li>
+  <li><strong>Seasonal cycle factors</strong> &mdash; North American monthly factors from Blasing et al. (2005) and EDGAR-derived Eurasian seasonal cycles, used to modulate annual fields to monthly resolution.</li>
+</ul>
+<p>Download locations and file-naming conventions are documented in the README included with the code.</p>
+
+<div class="disclaimer">
+<p>These data are made freely available to the public and the scientific community in the belief that their wide dissemination will lead to greater understanding and new scientific insights. To ensure that GML receives fair credit for their work please include relevant citation text in publications. We encourage users to contact the data providers, who can provide detailed information about the methodology and scientific context. In cases where the data are central to a publication, co-authorship for data providers may be appropriate.</p>
+</div>
+
+<div class="contact">
+<strong>Contact:</strong> Ashley Pera (<a href="mailto:ashley.pera@noaa.gov">ashley.pera@noaa.gov</a>), NOAA Global Monitoring Laboratory
+</div>
+
+</body>
+</html>
