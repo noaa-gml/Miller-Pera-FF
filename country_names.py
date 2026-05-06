@@ -34,7 +34,7 @@ def load_aliases(source_key: str) -> dict[str, str]:
 
 
 def validate_names(source_label: str, names: set[str], canonical: set[str],
-                   *, strict: bool = False):
+                   *, strict: bool = False) -> None:
     """Check that *names* are a subset of *canonical*.
 
     If strict=True, require exact match (for CDIAC which must produce all 189).

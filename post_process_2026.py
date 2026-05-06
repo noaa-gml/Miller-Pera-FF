@@ -36,9 +36,9 @@ import pint_xarray  # noqa: F401  # registers the .pint accessor on xarray
 import xarray as xr
 import xcdat  # noqa: F401  # monkey-patches .bounds.add_time_bounds onto xarray
 import xesmf as xe
-from dateutil.relativedelta import relativedelta
+from dateutil.relativedelta import relativedelta  # type: ignore[import-untyped]
 
-xr.set_options(keep_attrs=True)
+xr.set_options(keep_attrs=True)  # type: ignore[no-untyped-call]
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -85,7 +85,7 @@ def cell_areas_m2(earth_radius_km: float = EARTH_RADIUS) -> np.ndarray:
 # Main
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def main():
+def main() -> None:
     nyears = YR3 - YR1 + 1
     nmonths = nyears * 12
     provenance = (f"Post-processed {datetime.now(UTC).isoformat()} "
@@ -353,7 +353,14 @@ def main():
 # Validation helpers
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _cross_validate_with_pint(raw_llt, fossil_tll, times, lat, lon, areas_m2):
+def _cross_validate_with_pint(
+    raw_llt: np.ndarray,
+    fossil_tll: np.ndarray,
+    times: list[datetime],
+    lat: np.ndarray,
+    lon: np.ndarray,
+    areas_m2: np.ndarray,
+) -> None:
     """Re-derive using pint (same algorithm as the original notebook) and compare."""
     print("Cross-validating against pint-based computation ...")
     c_molar = C_MOLAR_MASS * cf_xarray.units.units("g / mol")
@@ -382,7 +389,7 @@ def _cross_validate_with_pint(raw_llt, fossil_tll, times, lat, lon, areas_m2):
     print("  Cross-validation passed")
 
 
-def _annual_pgc(data_yr, areas_m2, yr):
+def _annual_pgc(data_yr: np.ndarray, areas_m2: np.ndarray, yr: int) -> float:
     """Back-compute PgC/yr from mol/m2/s data with shape (12, 180, 360)."""
     total_mol = 0.0
     for m in range(12):
@@ -391,7 +398,7 @@ def _annual_pgc(data_yr, areas_m2, yr):
     return total_mol * C_MOLAR_MASS * 1e-15  # mol -> g -> Pg
 
 
-def _assert_dim_order(filepath: str, varname: str):
+def _assert_dim_order(filepath: str, varname: str) -> None:
     """Open a netCDF and assert dimension order is (time, lat, lon)."""
     nc = netCDF4.Dataset(filepath, "r")
     dims = nc.variables[varname].dimensions

@@ -20,6 +20,7 @@ CarbonTracker conventions (matching split.py):
 import os
 import sys
 from datetime import UTC, datetime
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -41,7 +42,7 @@ SOURCE_STRING = ("Miller-Pera FF 2026, 1993 country bounds. "
 # Build CarbonTracker dataset
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def build_carbontracker_dataset(ds_in):
+def build_carbontracker_dataset(ds_in: xr.Dataset) -> xr.Dataset:
     """Transform the monolithic dataset into CarbonTracker delivery format:
     - time → 'date' (midpoint of each month)
     - date_bounds, decimal_date, date_components, calendar_components
@@ -66,7 +67,7 @@ def build_carbontracker_dataset(ds_in):
     ds["date"].attrs["bounds"] = "date_bounds"
 
     # decimal_date — leap-year aware
-    def _decimal_year(dt64):
+    def _decimal_year(dt64: np.datetime64) -> float:
         """Convert datetime64 to decimal year, accounting for leap years."""
         dt = pd.Timestamp(dt64).to_pydatetime().replace(tzinfo=UTC)
         year_start = datetime(dt.year, 1, 1, tzinfo=UTC)
@@ -145,7 +146,7 @@ def build_carbontracker_dataset(ds_in):
 # Main
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def main():
+def main() -> None:
     if not os.path.exists(MONOLITHIC):
         print(f"ERROR: {MONOLITHIC} not found. Run post_process_2026.py first.", file=sys.stderr)
         sys.exit(1)
@@ -168,7 +169,7 @@ def main():
 
     os.makedirs(CT_DIR, exist_ok=True)
 
-    ct_encoding = {
+    ct_encoding: dict[str, dict[str, Any]] = {
         "date": {"units": "days since 1900-01-01", "dtype": "float64"},
         "calendar_components": {"dtype": "int32"},
         "date_components": {"dtype": "int32"},

@@ -43,7 +43,7 @@ SECTORS = [
 # Helpers
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _find_latest_real_file(edgar_dir, sector_tag):
+def _find_latest_real_file(edgar_dir: str, sector_tag: str) -> tuple[str, int]:
     """Return (path, year) for the most recent non-FAKE file in edgar_dir."""
     pattern = os.path.join(edgar_dir, f"EDGAR_*_CO2_*_{sector_tag}_flx.nc")
     real_files = [f for f in sorted(glob(pattern)) if "FAKE" not in f]
@@ -58,7 +58,7 @@ def _find_latest_real_file(edgar_dir, sector_tag):
     return latest, int(m.group(1))
 
 
-def _output_path(edgar_dir, base_name, year):
+def _output_path(edgar_dir: str, base_name: str, year: int) -> str:
     """Build the output path for a FAKE extrapolated year.
 
     Replaces the year in the filename and inserts FAKE before _flx.nc.
@@ -71,7 +71,9 @@ def _output_path(edgar_dir, base_name, year):
     return os.path.join(edgar_dir, name)
 
 
-def _empirical_growth_rate(edgar_dir, sector_tag, var_name, n_years):
+def _empirical_growth_rate(
+    edgar_dir: str, sector_tag: str, var_name: str, n_years: int,
+) -> float | None:
     """Estimate annual growth rate from the last n_years real EDGAR files.
 
     Returns the geometric-mean year-over-year growth rate as a fraction
@@ -100,7 +102,7 @@ def _empirical_growth_rate(edgar_dir, sector_tag, var_name, n_years):
 # Main
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def main():
+def main() -> None:
     timestamp = datetime.now(UTC).isoformat()
     any_written = False
 

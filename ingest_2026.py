@@ -38,7 +38,7 @@ from xarray import open_mfdataset
 from country_names import load_aliases, load_canonical, validate_names
 
 pd.set_option("future.no_silent_downcasting", True)
-xr.set_options(keep_attrs=True)
+xr.set_options(keep_attrs=True)  # type: ignore[no-untyped-call]
 
 
 # =============================================================================
@@ -145,7 +145,9 @@ USGS_RENAMES = load_aliases("USGS_2026")
 # Helper functions
 # =============================================================================
 
-def aggregate_countries(data, little_names, big_name):
+def aggregate_countries(
+    data: pd.DataFrame, little_names: list[str], big_name: str,
+) -> pd.DataFrame:
     """Merge small countries into a single big-country entry."""
     aggregated = data.xs(key=little_names[0], level="Nation").add(
         data.xs(key=little_names[1], level="Nation"), fill_value=0)
@@ -157,7 +159,7 @@ def aggregate_countries(data, little_names, big_name):
     return pd.concat([data.drop(little_names, level="Nation"), aggregated])
 
 
-def _read_ei_global(sheet, skipfooter):
+def _read_ei_global(sheet: str, skipfooter: int) -> pd.Series:
     """Read EI global row, keeping only integer-year columns."""
     df = pd.read_excel(EI_XLSX, sheet_name=sheet, header=2, index_col=0, skipfooter=skipfooter)
     assert "Total World" in df.index, f"'Total World' not found in sheet '{sheet}' -- check skipfooter"
@@ -166,7 +168,7 @@ def _read_ei_global(sheet, skipfooter):
     return row[year_cols].rename(lambda c: int(c))
 
 
-def seconds_in_year(year):
+def seconds_in_year(year: int) -> float:
     """Seconds in a calendar year (doesn't handle leap seconds — unix smears them)."""
     return (
         datetime(year + 1, 1, 1, tzinfo=UTC).timestamp()
@@ -177,7 +179,7 @@ def seconds_in_year(year):
 def _load_and_regrid_edgar(
     file_glob: str,
     target_year: int,
-    grid_01x01_areas,
+    grid_01x01_areas: xr.DataArray,
     label: str,
 ) -> np.ndarray:
     """Load EDGAR sector files, regrid 0.1° → 1°, and return normalized patterns.
@@ -188,7 +190,7 @@ def _load_and_regrid_edgar(
     files = sorted(glob(file_glob))
     print(f"  {label}: {len(files)} input files")
 
-    def add_id(ds):
+    def add_id(ds: xr.Dataset) -> xr.Dataset:
         ds.coords["year"] = int(ds.variables["fluxes"].attrs["year"])
         return ds
 
@@ -238,7 +240,7 @@ def _load_and_regrid_edgar(
 # Main
 # =============================================================================
 
-def main():
+def main() -> None:
     # ─────────────────────────────────────────────────────────────────────────
     # 1. CDIAC global
     # Source: https://rieee.appstate.edu/projects-programs/cdiac/
@@ -714,9 +716,8 @@ def main():
     # 9. Country map
     # ─────────────────────────────────────────────────────────────────────────
     print("9. Country map ...")
-    country_map = np.loadtxt("inputs/COUNTRY1X1.1993.mod.txt", skiprows=3)
-    country_map = country_map.reshape(180, 360)
-    country_map = xr.DataArray(country_map)
+    country_map_raw = np.loadtxt("inputs/COUNTRY1X1.1993.mod.txt", skiprows=3).reshape(180, 360)
+    country_map = xr.DataArray(country_map_raw)
 
     codes = pd.read_csv("inputs/COUNTRY1X1.CODE.mod2.2013.csv", header=None, names=["code", "nation"])
 

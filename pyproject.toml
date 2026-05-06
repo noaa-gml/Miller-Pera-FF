@@ -92,3 +92,42 @@ ignore = [
     "PLW2901",  # for-loop variable overwritten
     "DTZ001",   # datetime without tzinfo
 ]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# mypy: type-check the pipeline scripts.
+#
+# Run with the project's conda env so package types resolve:
+#     mypy --python-executable=$(conda run -n p312 which python) .
+# or just `mypy .` if the env is already active.
+# ─────────────────────────────────────────────────────────────────────────────
+
+[tool.mypy]
+python_version = "3.12"
+exclude = [
+    "archive/",
+    "send_to_ken/",
+    "__pycache__/",
+    ".venv/",
+]
+# Most of our scientific stack (xesmf, xcdat, cf_xarray, pint_xarray,
+# dateutil, openpyxl) ships without type stubs. Don't fail the run on that.
+ignore_missing_imports = true
+# Equivalent to --strict, minus warn_return_any (numpy/pandas operations
+# widen to Any in many cases and chasing those down isn't worth the noise
+# in research code).
+warn_unused_configs = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_reexport = true
+strict_equality = true
+extra_checks = true
+warn_return_any = false
