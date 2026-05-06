@@ -1,0 +1,91 @@
+# pyproject.toml — ruff configuration for the Miller-Pera FF pipeline.
+#
+# Strategy: enable everything in ruff (`select = ["ALL"]`) and suppress only
+# the categories that are inappropriate for a scientific data pipeline. The
+# remaining warnings are real issues worth a hand-fix (unused vars, datetime
+# without tz, zip-strict, etc.).
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["archive", "__pycache__", ".venv", "send_to_ken"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+
+ignore = [
+    # ── Style preferences for a research pipeline ───────────────────────────
+    "E501",     # line too long  (line-length already raised to 100)
+    "T201",     # print()        (used for pipeline progress reporting)
+    "S101",     # assert         (used for runtime invariants in scripts)
+    "N806",     # non-lowercase locals  (R_km, Gg_to_mol — scientific convention)
+    "N811",     # constant imported as non-constant
+    "N816",     # mixedCase in global scope
+
+    # ── Type annotations — optional for research scripts ────────────────────
+    "ANN001",   # missing arg annotation
+    "ANN201",   # missing return annotation (public)
+    "ANN202",   # missing return annotation (private)
+
+    # ── "Ambiguous" Unicode — × ° – µ are legitimate scientific characters ──
+    "RUF001",   # in strings
+    "RUF002",   # in docstrings
+    "RUF003",   # in comments
+
+    # ── Pandas style preferences (we use the older idioms intentionally) ────
+    "PD002",    # avoid inplace=True
+    "PD010",    # .pivot_table over .pivot
+    "PD011",    # .to_numpy() over .values
+    "PD013",    # .melt over .stack
+
+    # ── pathlib vs os.path — both are acceptable here ──────────────────────
+    "PTH100", "PTH103", "PTH110", "PTH118", "PTH119", "PTH120",
+    "PTH123", "PTH207", "PTH208",
+
+    # ── Magic values — many "magic numbers" are the actual scientific values
+    "PLR2004",
+
+    # ── Complexity — large main() functions are pipeline orchestration ──────
+    "PLR0911",  # too many returns
+    "PLR0912",  # too many branches
+    "PLR0913",  # too many arguments
+    "PLR0915",  # too many statements
+    "C901",     # function too complex
+
+    # ── Docstring formatting — pedantic for a research codebase ─────────────
+    "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107",
+    "D200", "D202", "D203", "D205", "D212", "D213",
+    "D400", "D401", "D404", "D413", "D415", "D417",
+
+    # ── Exception-message formatting (long f-string messages are fine) ──────
+    "TRY003", "EM101", "EM102",
+
+    # ── Conflicts with the formatter / formatter handles ────────────────────
+    "COM812",   # missing trailing comma
+    "ISC001",   # implicit string concat (single-line)
+    "ISC002",   # implicit string concat (multi-line)
+
+    # ── Miscellaneous not-a-bug ─────────────────────────────────────────────
+    "FBT003",   # boolean positional in function call
+    "RUF005",   # consider list spread instead of concatenation
+    "RUF007",   # prefer itertools.pairwise
+    "RUF015",   # prefer next(iter(x))
+    "PERF401",  # manual list comprehension
+    "S603",     # subprocess without explicit shell=False (false-positive heavy)
+    "EXE001",   # shebang present but file not executable (chmod is build-time)
+    "PLW0108",  # lambda may be unnecessary
+    "F541",     # f-string without placeholder (sometimes intentional templating)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Notebooks are research/exploratory; relax further.
+"*.ipynb" = [
+    "E402",     # imports not at top (cells reimport)
+    "E702",     # multiple statements on one line
+    "E731",     # lambda assignment
+    "F841",     # unused local variable
+    "B007",     # unused loop variable
+    "B905",     # zip without strict
+    "PLW2901",  # for-loop variable overwritten
+    "DTZ001",   # datetime without tzinfo
+]

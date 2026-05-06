@@ -153,6 +153,7 @@ def _piqs(x: np.ndarray, ybar: np.ndarray) -> np.ndarray:
     ---------
     L. A. Rasmussen, "Piecewise Integral Splines of Low Degree",
     *Computers & Geosciences* 17(9), 1255–1263, 1991.
+
     """
     x = np.asarray(x, dtype=np.float64)
     ybar = np.asarray(ybar, dtype=np.float64)
@@ -290,6 +291,7 @@ def _load_cdiac_national(
     country_cdiac : ``(n_cdiac_yrs, n_countries, 6)``
     country_names : list of retained country names
     n_countries   : number of countries retained
+
     """
     df = pd.read_csv("processed_inputs/CDIAC_national_2020.csv")
     grouped = df.groupby(df.columns[0], sort=False)
@@ -367,6 +369,7 @@ def _load_cement_ratios(
     -------
     country_ratios : ``(n_cement_yrs, n_countries)`` year-over-year multipliers.
     global_ratios  : ``(n_cement_yrs,)`` year-over-year multipliers (world total).
+
     """
     years = list(range(yr_cdiac, yr_final + 1))      # [2021, 2022, ..., 2025]
 
@@ -398,6 +401,7 @@ def _load_giss_map() -> tuple[np.ndarray, np.ndarray]:
     gissmap   : ``(360, 180)`` int — country codes; 0 = ocean.
     codes_arr : ``(n_countries,)`` int — code for each country (ordered
                 to match the CDIAC country list).
+
     """
     codes_df = pd.read_csv(
         "inputs/COUNTRY1X1.CODE.mod2.2013.csv",
@@ -420,6 +424,7 @@ def _load_edgar_patterns(
         Sector patterns: axis 3 is [combustion, flaring, cement].
     fracarr_totals : ``(n_total_yrs, 360, 180)``
         TOTALS pattern (used for bunker-fuel distribution).
+
     """
     data = np.load("processed_inputs/edgar_patterns.npz")
     fracarr = data["fracarr"].transpose((2, 0, 1, 3))  # (180,360,yrs,3) → (yrs,180,360,3)
@@ -523,6 +528,7 @@ def _distribute_to_grid(
         Sector patterns: axis 3 is [combustion, flaring, cement].
 
     Returns ``(n_total_yrs, 360, 180, 6)``.
+
     """
     n_countries = country_all.shape[1]
     flux = np.zeros((n_total_yrs, 360, 180, _NSECTORS))
@@ -616,6 +622,7 @@ def _interpolate_to_monthly(
     -------
     ff_monthly : ``(n_total_yrs × 12, 360, 180)``
     ff_time    : ``(n_total_yrs × 12,)`` — mid-month decimal years.
+
     """
     year_edges = np.arange(n_total_yrs + 1) + yr_start
 
@@ -709,7 +716,6 @@ def _apply_seasonality(
 
 def main() -> None:
     """Run the full pipeline: load → extrapolate → grid → interpolate → save."""
-
     # ── Configuration ────────────────────────────────────────────────────
     season   = "nam"
     seas2    = "euras"
@@ -725,8 +731,8 @@ def main() -> None:
     fuels        = ["gas", "oil", "coal", "flaring"]
 
     # EI flaring volumes (BCM) — global ratios still needed for _extrapolate_global
-    _flaring_bcm = pd.read_csv('processed_inputs/EI_flaring_bcm.csv', index_col='Year')
-    flaring = _flaring_bcm.loc[yr_cdiac:yr_ei, 'BCM'].values
+    _flaring_bcm = pd.read_csv("processed_inputs/EI_flaring_bcm.csv", index_col="Year")
+    flaring = _flaring_bcm.loc[yr_cdiac:yr_ei, "BCM"].values
     assert len(flaring) == n_ei_yrs + 1, (
         f"Expected {n_ei_yrs + 1} flaring BCM values ({yr_cdiac}–{yr_ei}), got {len(flaring)}")
     frac_inc_flare  = flaring[1:] / flaring[:-1]

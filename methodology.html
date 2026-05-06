@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Methodology &mdash; Gridded Fossil-Fuel CO&#8322; Emission Estimates (1993&ndash;2025)</title>
+<style>
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    max-width: 900px;
+    margin: 2em auto;
+    padding: 0 1.5em;
+    line-height: 1.6;
+    color: #222;
+    background: #fff;
+  }
+  h1 {
+    font-size: 1.5em;
+    border-bottom: 2px solid #003366;
+    padding-bottom: 0.3em;
+    color: #003366;
+  }
+  h2 {
+    font-size: 1.2em;
+    color: #003366;
+    margin-top: 2em;
+    border-bottom: 1px solid #ccd6e0;
+    padding-bottom: 0.2em;
+  }
+  h3 {
+    font-size: 1.05em;
+    color: #003366;
+    margin-top: 1.4em;
+  }
+  .citation {
+    background: #f0f4f8;
+    border-left: 4px solid #003366;
+    padding: 0.8em 1em;
+    margin: 1em 0;
+    font-style: italic;
+  }
+  .nav {
+    font-size: 0.95em;
+    margin-bottom: 1em;
+  }
+  .toc {
+    background: #f7f9fb;
+    border: 1px solid #d5dde6;
+    padding: 0.8em 1.2em;
+    margin: 1.2em 0 2em 0;
+    font-size: 0.95em;
+  }
+  .toc ul { margin: 0.3em 0; padding-left: 1.4em; }
+  .toc li { margin-bottom: 0.2em; }
+  table {
+    border-collapse: collapse;
+    margin: 1em 0;
+    width: 100%;
+    font-size: 0.95em;
+  }
+  th, td {
+    border: 1px solid #ccd6e0;
+    padding: 0.5em 0.8em;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #f0f4f8;
+    color: #003366;
+  }
+  code {
+    font-family: 'Menlo', 'Consolas', monospace;
+    background: #f4f4f4;
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+    font-size: 0.92em;
+  }
+  pre {
+    background: #f4f4f4;
+    border: 1px solid #ddd;
+    padding: 0.8em 1em;
+    overflow-x: auto;
+    font-size: 0.9em;
+    font-family: 'Menlo', 'Consolas', monospace;
+    line-height: 1.4;
+  }
+  pre code {
+    background: transparent;
+    padding: 0;
+  }
+  ul { padding-left: 1.5em; }
+  li { margin-bottom: 0.4em; }
+  a { color: #003366; }
+  .contact {
+    margin-top: 2em;
+    font-size: 0.95em;
+    padding-top: 1em;
+    border-top: 1px solid #ccd6e0;
+  }
+</style>
+</head>
+<body>
+
+<div class="nav">&larr; <a href="landing_page.html">Back to dataset landing page</a></div>
+
+<h1>Methodology &mdash; Gridded Fossil-Fuel CO&#8322; Emission Estimates (1993&ndash;2025)</h1>
+
+<div class="citation">
+Gridded 1&deg; &times; 1&deg; monthly fossil-fuel CO&#8322; emission estimates (1993&ndash;2025) for use as fluxes in atmospheric inversion systems. Version 2026 (March 2026). Pera, Jacobson, and Miller, NOAA Global Monitoring Laboratory.
+</div>
+
+<div class="toc">
+<strong>Contents</strong>
+<ul>
+  <li><a href="#overview">Overview</a></li>
+  <li><a href="#sources">Data sources</a></li>
+  <li><a href="#methodology">Methodology</a>
+    <ul>
+      <li><a href="#global-national">Global and national totals</a></li>
+      <li><a href="#harmonisation">Country harmonisation</a></li>
+      <li><a href="#interpolation">CDIAC sector interpolation</a></li>
+      <li><a href="#spatial">Spatial distribution</a></li>
+      <li><a href="#temporal">Temporal distribution</a></li>
+      <li><a href="#extrapolation">Extrapolation beyond CDIAC</a></li>
+    </ul>
+  </li>
+  <li><a href="#pipeline">Pipeline overview</a></li>
+  <li><a href="#outputs">Output formats</a></li>
+  <li><a href="#verification">Verification</a></li>
+  <li><a href="#references">References</a></li>
+</ul>
+</div>
+
+<h2 id="overview">Overview</h2>
+
+<p>This product provides gridded 1&deg; &times; 1&deg; monthly fossil-fuel CO&#8322; emission estimates covering 1993&ndash;2025 for use as prior fluxes in NOAA GML atmospheric inversion systems (CarbonTracker, TM5-4DVar). It combines national inventories (<strong>CDIAC</strong>, <strong>Energy Institute</strong>, <strong>USGS cement</strong>) with <strong>EDGAR</strong> spatial patterns to produce a global, monthly product broken down by the six CDIAC categories: solid/coal, liquid/petroleum, gas/natural gas, flaring, cement, and bunker fuels.</p>
+
+<h2 id="sources">Data sources</h2>
+
+<table>
+<thead>
+<tr><th>Source</th><th>Coverage</th><th>Link</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>CDIAC</strong> (AppState)</td><td>National &amp; global annual FF + cement through 2022</td><td><a href="https://rieee.appstate.edu/projects-programs/cdiac/">rieee.appstate.edu</a></td></tr>
+<tr><td><strong>Energy Institute</strong></td><td>National oil / gas / coal / flaring through 2024</td><td><a href="https://www.energyinst.org/statistical-review">energyinst.org</a></td></tr>
+<tr><td><strong>EDGAR v8.0 (2025 GHG)</strong></td><td>Gridded 0.1&deg; sector fluxes (TOTALS, NMM, PRO_FFF)</td><td><a href="https://edgar.jrc.ec.europa.eu/dataset_ghg2025">edgar.jrc.ec.europa.eu</a></td></tr>
+<tr><td><strong>USGS Cement</strong></td><td>National cement production for extrapolation</td><td><a href="https://www.usgs.gov/centers/national-minerals-information-center/cement-statistics-and-information">usgs.gov</a></td></tr>
+<tr><td><strong>GISS Country Grid</strong></td><td>1&deg; country assignment map (1993 boundaries)</td><td><a href="https://data.giss.nasa.gov/landuse/country.html">data.giss.nasa.gov</a></td></tr>
+</tbody>
+</table>
+
+<h2 id="methodology">Methodology</h2>
+
+<h3 id="global-national">Global and national totals</h3>
+
+<p>Annual global total fossil-fuel CO&#8322; emissions are based on the Appalachian Energy Center's &ldquo;<a href="https://rieee.appstate.edu/projects-programs/cdiac/">CDIAC at AppState</a>&rdquo; project [<a href="https://doi.org/10.6084/m9.figshare.31449082">Erb &amp; Marland, 2026</a>], which updates the original annual global and country fossil-fuel CO&#8322; emissions estimates from the DOE's Carbon Dioxide Information and Analysis Center (CDIAC) [<a href="https://doi.org/10.5194/essd-13-1667-2021">Boden et al., 2017</a>]. The CDIAC-at-AppState emissions estimates used in this product extend through 2022 and cover 189 nations across six categories: gas/natural gas, liquid/petroleum, solid/coal, flaring, cement, and a computed total.</p>
+
+<h3 id="harmonisation">Country harmonisation</h3>
+
+<p>The raw CDIAC national dataset contains 261 entities spanning the full historical record. Of these, 30 are historical entities with no data after 1993 (e.g., the former USSR, Czechoslovakia, East/West Germany) and are excluded. The remaining 231 active entities are harmonised to 189 canonical countries through three operations:</p>
+
+<ul>
+  <li><strong>Renaming:</strong> Standardises variant spellings and historical name changes (e.g., &ldquo;ZAIRE&rdquo; &rarr; &ldquo;Democratic Republic Of The Congo&rdquo;).</li>
+  <li><strong>Aggregation:</strong> Merges small territories into their parent countries. For example, Eritrea is summed into Ethiopia, Timor-Leste into Indonesia, Gibraltar and Andorra into Spain, and the former Yugoslav republics (Croatia, Slovenia, Bosnia &amp; Herzegovina, Kosovo, Serbia, Montenegro, Macedonia) are combined into a single Yugoslavia entry.</li>
+  <li><strong>Deletion:</strong> Removes 22 very small territories with incomplete records and no GISS grid cells (e.g., Cayman Islands, Palau, Montserrat).</li>
+</ul>
+
+<h3 id="interpolation">CDIAC sector interpolation</h3>
+
+<p>Many CDIAC country-year-sector cells are reported as NaN in the raw data &mdash; most commonly flaring (4025 NaN rows), but also gas (2432), solid fuel (2094), cement (315), and liquid fuel (48). These gaps are filled by linear interpolation within each nation's time series, with forward-fill for trailing NaN values. This is particularly important for the four French overseas departments (French Guiana, Guadeloupe, Martinique, R&eacute;union), which have no CDIAC data after 2010 and are forward-filled from their last reported values.</p>
+
+<p>After interpolation, any row where the reported total does not match the sector sum (a consequence of the original total having been computed without the then-missing sector) is recomputed as the sum of the five sectors.</p>
+
+<h3 id="spatial">Spatial distribution</h3>
+
+<p>Fossil-fuel CO&#8322; fluxes are spatially distributed in two steps. First, the coarse-scale country totals from CDIAC are mapped onto a 1&deg; &times; 1&deg; grid according to spatial patterns from the EDGAR v8.0 inventories [<a href="https://data.europa.eu/doi/10.2760/9816914">Crippa et al., 2024</a>]. Each CDIAC category uses its own EDGAR spatial pattern within each country:</p>
+
+<ul>
+  <li><strong>Gas / oil / coal</strong> &rarr; combustion pattern (EDGAR TOTALS minus NMM minus PRO_FFF)</li>
+  <li><strong>Cement</strong> &rarr; NMM (non-metallic minerals manufacturing) &mdash; concentrated at cement plants</li>
+  <li><strong>Flaring</strong> &rarr; PRO_FFF (fuel exploitation) &mdash; concentrated in oil/gas-producing regions</li>
+</ul>
+
+<p>The spatial pattern varies by year up to the end of the EDGAR v8.0 product (2022). After this, the spatial patterns are linearly extrapolated from recent trends. While EDGAR provides annual emissions estimates at 0.1&deg; &times; 0.1&deg; resolution (regridded here to 1&deg; &times; 1&deg;), their global totals do not agree with CDIAC, which we consider more authoritative due to being based on countries' own reporting. Therefore, only the spatial patterns in EDGAR are used, and the total emissions are rescaled to CDIAC values.</p>
+
+<p>The CDIAC country-by-country totals sum to about 95% of the global total emissions; the remaining ~5% is mapped to global shipping routes according to EDGAR, which serves as a proxy for international bunker-fuel emissions.</p>
+
+<h3 id="temporal">Temporal distribution</h3>
+
+<p>The pipeline converts annual emissions to monthly resolution in two stages:</p>
+
+<ol>
+  <li><strong>Integral-preserving interpolation.</strong> A piecewise integral-preserving quadratic spline (PIQS) [<a href="https://doi.org/10.1016/0098-3004(91)90027-B">Rasmussen, 1991</a>] is fit to each 1&deg; &times; 1&deg; grid cell independently. For each annual segment, a quadratic <em>f(t) = a(t&minus;x)&sup2; + b(t&minus;x) + c</em> is chosen such that the integral over the year equals the annual total, continuity and differentiability hold at every year boundary, and a global smoothness measure is minimised. The spline is evaluated at daily resolution and then binned into monthly means. If any day in a pixel-year goes negative (a spline artefact for rapidly declining emissions), the smooth curve is replaced with the constant annual mean for that pixel-year.</li>
+  <li><strong>Seasonal modulation.</strong> For North America (30&ndash;60&deg;N, 60&ndash;140&deg;W), a seasonal cycle derived from the first and second harmonics [<a href="https://doi.org/10.1029/JD094iD06p08549">Thoning et al., 1989</a>] of the Blasing et al. [<a href="https://doi.org/10.1029/2007JG000435">2005</a>] analysis for the United States is applied. The Blasing analysis produces ~10% higher emissions in winter than in summer. This scheme defines a fixed fraction of emissions for each month, so while the shape of the annual cycle is invariant, the amplitude scales with the annual total. For Eurasia (30&ndash;60&deg;N, 20&deg;W&ndash;170&deg;E), a separate set of seasonal-emissions factors derived from EDGAR sector-resolved data is applied. The Eurasian seasonal amplitude is about 25%, significantly larger than North America, owing to the absence of a secondary summertime maximum from air conditioning. Outside these two zones, no seasonal modulation is applied.</li>
+</ol>
+
+<h3 id="extrapolation">Extrapolation beyond CDIAC</h3>
+
+<p>The full CDIAC-at-AppState dataset is available through 2022 and EDGAR spatial patterns through 2022 at time of production. A prior estimate of fluxes through 2025 is required to accommodate the assimilation window.</p>
+
+<p>For <strong>2023&ndash;2024</strong>, per-country fractional increases in sectoral emissions are taken from:</p>
+
+<ol>
+  <li>The <strong>Energy Institute</strong> Statistical Review of World Energy [<a href="https://www.energyinst.org/statistical-review/about">EI, 2025</a>] for coal, oil, gas, and flaring.</li>
+  <li>The <strong>USGS</strong> National Minerals Information Center <a href="https://www.usgs.gov/centers/national-minerals-information-center/cement-statistics-and-information">Cement Mineral Commodity Summaries</a> for cement.</li>
+</ol>
+
+<p>For example, to compute 2023 coal emissions for France, the EI ratio of 2023 to 2022 French coal consumption is used to scale the 2022 CDIAC value, which is then distributed using the EDGAR spatial pattern.</p>
+
+<p>The EI does not report individual data for all 189 CDIAC countries. Countries without direct EI coverage are assigned to regional aggregates defined in two JSON configuration files (<code>EI_2024_fuel_regions.json</code> and <code>EI_2024_flaring_regions.json</code>). For fuels (oil, gas, coal), 76 countries have direct EI data and 113 use one of 12 regional aggregates (e.g., &ldquo;Eastern Africa&rdquo;, &ldquo;Central America&rdquo;, &ldquo;Other Asia Pacific&rdquo;). For flaring, 49 countries have direct EI data and 140 use one of 6 broader regional aggregates (e.g., &ldquo;Other Africa&rdquo;, &ldquo;Other Europe&rdquo;). All countries within a regional aggregate share the same year-over-year growth rate. Where a country has NaN ratios even after regional assignment (e.g., zero base-year consumption), the global-average fractional change is used as a fallback.</p>
+
+<p>Flaring uses the same per-country EI ratio mechanism as the combustion fuels: countries with direct EI flaring data get their own year-over-year CO&#8322;-from-flaring growth rates, while countries in regional aggregates share the regional rate. For the global-total extrapolation (used to compute the bunker-fuel residual), flaring volumes (BCM) are read from the EI &ldquo;Natural Gas Flaring&rdquo; sheet and converted to year-over-year ratios.</p>
+
+<p>For <strong>2025</strong>, USGS cement data is available and per-country cement ratios are applied directly. For combustion fuels and flaring, assumed growth rates are applied uniformly across all countries: oil +2.5%, gas +2.5%, coal +1%, flaring +1%. These rates reflect consensus near-term projections and are configured in <code>ff_country_2026.py</code>.</p>
+
+<h2 id="pipeline">Pipeline overview</h2>
+
+<pre><code>CDIAC nationals ──┐
+EI fuel ratios ───┤── country totals ──→ distribute onto ──→ monthly ──→ netCDF
+USGS cement ──────┘   (189 countries)     1°×1° grid          via piqs
+                                          (EDGAR patterns)    spline +
+                                                              seasonal cycle
+</code></pre>
+
+<table>
+<thead>
+<tr><th>Step</th><th>Script</th><th>What it does</th></tr>
+</thead>
+<tbody>
+<tr><td>0</td><td><code>extrapolate_edgar.py</code></td><td>Extend EDGAR spatial fields beyond their last real year (if needed)</td></tr>
+<tr><td>1</td><td><code>ingest_2026.py</code></td><td>Read all raw inputs, harmonise 189 country names, regrid EDGAR 0.1&deg; &rarr; 1&deg;, compute EI/USGS ratios</td></tr>
+<tr><td>2</td><td><code>ff_country_2026.py</code></td><td>Assign national emissions to grid cells, extrapolate, apply seasonal cycles</td></tr>
+<tr><td>3</td><td><code>post_process_2026.py</code></td><td>Convert Gg C &rarr; mol m<sup>&minus;2</sup> s<sup>&minus;1</sup>, write per-year + monolithic netCDFs, call <code>split_ct_2026.py</code></td></tr>
+<tr><td>3b</td><td><code>split_ct_2026.py</code></td><td>Reformat to CarbonTracker conventions (auto-called by step 3)</td></tr>
+<tr><td>4</td><td><code>verify_2026.ipynb</code></td><td>90+ automated quality checks across 11 sections</td></tr>
+</tbody>
+</table>
+
+<h2 id="outputs">Output formats</h2>
+
+<table>
+<thead>
+<tr><th>Format</th><th>Location</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Monolithic</strong></td><td><code>outputs/gml_ff_co2_2026.nc</code></td><td>All years in one file (verification &amp; plotting)</td></tr>
+<tr><td><strong>TM5 per-year</strong></td><td><code>outputs/yearly/gml_ff_co2_2026.{YYYY}.nc</code></td><td><code>fossil_imp</code> (time, lat, lon), float32, 33 files</td></tr>
+<tr><td><strong>CarbonTracker per-year</strong></td><td><code>outputs/ct/flux1x1_ff.{YYYY}.nc</code></td><td>CT conventions (<code>date</code>, <code>date_bounds</code>, <code>decimal_date</code>), 33 files</td></tr>
+<tr><td><strong>CarbonTracker per-month</strong></td><td><code>outputs/ct/flux1x1_ff.{YYYYMM}.nc</code></td><td>Same conventions, 396 files</td></tr>
+</tbody>
+</table>
+
+<p>Units: <code>mol m<sup>&minus;2</sup> s<sup>&minus;1</sup></code> on a global 1&deg; &times; 1&deg; grid (180 &times; 360), monthly time steps.</p>
+
+<h2 id="verification">Verification</h2>
+
+<p>A companion Jupyter notebook (<code>verify_2026.ipynb</code>) runs 90+ automated checks organised into two parts:</p>
+
+<p><strong>Part I &mdash; Input Data Integrity (Sections 1&ndash;4):</strong> CDIAC accounting identities, suspicious year-over-year jumps, gap detection, country-to-grid mapping completeness, deleted-territory emission accounting, bunker-fraction plausibility, Excel schema stability, aggregation/rename drift, French-departments interpolation sanity, sector-sum integrity, EDGAR file completeness and global-total accuracy, real-vs-FAKE year split, EDGAR spatial-pattern stability, USGS-vs-CDIAC cement cross-check, EI country coverage and validation, EI fractional-change plausibility, USGS cement year/country coverage, fallback coverage, per-country flaring-ratio validation, monthly flux array integrity, GISS country grid integrity, country-list ordering, seasonal-input format checks, piqs negative-clamp fraction, and fracarr sector correlation.</p>
+
+<p><strong>Part II &mdash; Output Quality (Sections 5&ndash;11):</strong> global totals vs CDIAC, time-series trends, growth rates, per-capita sanity, COVID-19 dip, post-CDIAC trend validation, assumed 2025 growth-rate verification, national-sum conservation at the CDIAC&rarr;EI boundary, NetCDF data quality and unit cross-verification, coordinate and metadata consistency, CarbonTracker-format spot-checks, calendar accuracy, coordinate bounds coverage, float32 fidelity, CF attribute completeness, spatial correlation with previous products, hemisphere balance, sector breakdown, country-level totals, interannual variability hotspots, industrial-zone hot spots, flaring concentration, polar zero-check, grid-cell roundtrip, seasonal ratio maps, boundary-leakage, rank stability, seasonal cycle sanity and regional phasing, bunker-fuel accounting, cement/flaring sector-fraction stability, piqs integral preservation, end-to-end Gg C roundtrip, year-boundary monthly continuity, and spatial correlation between consecutive years.</p>
+
+<p>A pre-rendered HTML report (<code>verify_2026_report.html</code>) is included with the delivered outputs.</p>
+
+<h2 id="references">References</h2>
+
+<ul>
+  <li>Blasing, T. J., C. T. Broniak, and G. Marland (2005). The annual cycle of fossil-fuel carbon dioxide emissions in the United States. <em>Tellus B</em>, 57, 107&ndash;115. <a href="https://doi.org/10.1029/2007JG000435">https://doi.org/10.1029/2007JG000435</a></li>
+  <li>Boden, T. A., G. Marland, and R. J. Andres (2017). Global, Regional, and National Fossil-Fuel CO&#8322; Emissions. CDIAC/ORNL. <a href="https://doi.org/10.5194/essd-13-1667-2021">https://doi.org/10.5194/essd-13-1667-2021</a></li>
+  <li>Crippa, M. et al. (2024). EDGAR v8.0 Greenhouse Gas Emissions. European Commission, JRC. <a href="https://data.europa.eu/doi/10.2760/9816914">https://data.europa.eu/doi/10.2760/9816914</a></li>
+  <li>Energy Institute (2025). <em>Statistical Review of World Energy, 2025 edition.</em> <a href="https://www.energyinst.org/statistical-review/about">https://www.energyinst.org/statistical-review/about</a></li>
+  <li>Erb, M. and G. Marland (2026). CDIAC at AppState &mdash; Global and National Fossil-Fuel CO&#8322; Emissions. <a href="https://doi.org/10.6084/m9.figshare.31449082">https://doi.org/10.6084/m9.figshare.31449082</a></li>
+  <li>Rasmussen, O. L. (1991). Piecewise integral quadratic spline interpolation. <em>Computers &amp; Geosciences</em>, 17(9), 1225&ndash;1235. <a href="https://doi.org/10.1016/0098-3004(91)90027-B">https://doi.org/10.1016/0098-3004(91)90027-B</a></li>
+  <li>Thoning, K. W., P. P. Tans, and W. D. Komhyr (1989). Atmospheric carbon dioxide at Mauna Loa Observatory. <em>J. Geophys. Res.</em>, 94, 8549&ndash;8565. <a href="https://doi.org/10.1029/JD094iD06p08549">https://doi.org/10.1029/JD094iD06p08549</a></li>
+  <li>USGS (2024). National Minerals Information Center &mdash; Cement Statistics and Information. <a href="https://www.usgs.gov/centers/national-minerals-information-center/cement-statistics-and-information">https://www.usgs.gov/centers/national-minerals-information-center/cement-statistics-and-information</a></li>
+</ul>
+
+<div class="contact">
+&larr; <a href="landing_page.html">Back to dataset landing page</a> &nbsp;&middot;&nbsp; <strong>Contact:</strong> Ashley Pera (<a href="mailto:ashley.pera@noaa.gov">ashley.pera@noaa.gov</a>), NOAA Global Monitoring Laboratory
+</div>
+
+</body>
+</html>

@@ -35,8 +35,8 @@ python post_process_2026b.py          # Step 3  — netCDF conversion (auto-call
 
 | Format | Location | Description |
 |---|---|---|
-| **Monolithic** | `outputs/ash_ff_2026b.nc` | All years in one file (verification & plotting) |
-| **TM5 per-year** | `outputs/yearly/ash_ff_2026b.{YYYY}.nc` | `fossil_imp` (time, lat, lon), float32, 33 files |
+| **Monolithic** | `outputs/gml_ff_co2_2026.nc` | All years in one file (verification & plotting) |
+| **TM5 per-year** | `outputs/yearly/gml_ff_co2_2026.{YYYY}.nc` | `fossil_imp` (time, lat, lon), float32, 33 files |
 | **CarbonTracker per-year** | `outputs/ct/flux1x1_ff.{YYYY}.nc` | CT conventions (`date`, `date_bounds`, `decimal_date`), 33 files |
 | **CarbonTracker per-month** | `outputs/ct/flux1x1_ff.{YYYYMM}.nc` | Same conventions, 396 files |
 
@@ -189,7 +189,7 @@ miller-ff/
 ├── outputs/
 │   ├── yearly/                    #   Per-year TM5-format files
 │   ├── ct/                        #   CarbonTracker-format files
-│   ├── ash_ff_2026b.nc             #   Monolithic (all years)
+│   ├── gml_ff_co2_2026.nc             #   Monolithic (all years)
 │   └── summary_figure.png         #   README figure
 └── archive/                       # Previous versions
 ```
@@ -214,7 +214,7 @@ If you are reading this on the HPC or in a delivered output directory, the layou
 ├── flux1x1_ff.2025.nc
 ├── flux1x1_ff.202512.nc
 └── from_ash/
-    └── ash_ff_2026b.nc              ← monolithic source file (all years, all variables)
+    └── gml_ff_co2_2026.nc              ← monolithic source file (all years, all variables)
 ```
 
 ### CarbonTracker-Format Files (`flux1x1_ff.*.nc`)
@@ -231,13 +231,13 @@ CarbonTracker conventions:
 - CarbonTracker global attributes (Notes, disclaimer, contact info)
 - Only `fossil_imp` + coordinate bounds (no diagnostic variables)
 
-### Monolithic Source File (`from_ash/ash_ff_2026b.nc`)
+### Monolithic Source File (`from_ash/gml_ff_co2_2026.nc`)
 
 All years in one file, used as input to `split_ct_2026b.py`. Contains `fossil_imp` (mol/m²/s) and `fossil_imp_cell` (mol/cell/yr), 1°×1°, monthly 1993-01 through 2025-12.
 
 ### TM5/Fortran Per-Year Files (in the development repo)
 
-The per-year TM5-format files (`ash_ff_2026b.{YYYY}.nc`) are generated during production but are **not** included in this HPC directory. They live in the development repo under `outputs/yearly/`. If you need them, see the repository.
+The per-year TM5-format files (`gml_ff_co2_2026.{YYYY}.nc`) are generated during production but are **not** included in this HPC directory. They live in the development repo under `outputs/yearly/`. If you need them, see the repository.
 
 The NetCDF dimension order `(time, lat, lon)` maps to the Fortran column-major buffer `ff_input(nlon360, nlat180, 12)` = `(lon, lat, time)` as expected.
 
@@ -325,7 +325,7 @@ python ff_country_2026b.py
 **`post_process_2026b.py`** — Loads the `.npz` output from Step 2, converts units (Gg C → mol/m²/s), cross-validates the conversion against an independent pint-based computation, and writes:
 
 1. **Per-year files** to `outputs/yearly/` — one `.nc` per year, dims `(time, lat, lon)`, variable `fossil_imp`, float32. These are the files TM5 reads.
-2. **Monolithic file** `outputs/ash_ff_2026b.nc` — all years in one file for verification and plotting.
+2. **Monolithic file** `outputs/gml_ff_co2_2026.nc` — all years in one file for verification and plotting.
 3. Calls `split_ct_2026b.py` to produce CarbonTracker-format files (see below).
 
 Built-in verification checks: input quality (NaN/Inf/negative), cell areas sum to 4πR², time monotonicity, global totals (5–15 PgC/yr, <20% YoY change), round-trip read-back, cross-validation with pint-based unit chain.
@@ -335,11 +335,11 @@ python post_process_2026b.py
 ```
 
 - **Input:** `outputs/ff_monthly_2026b_py.npz`
-- **Output:** `outputs/yearly/ash_ff_2026b.{YYYY}.nc` (33 files), `outputs/ash_ff_2026b.nc`
+- **Output:** `outputs/yearly/gml_ff_co2_2026.{YYYY}.nc` (33 files), `outputs/gml_ff_co2_2026.nc`
 
 ## Step 3b: CarbonTracker-Format Split
 
-**`split_ct_2026b.py`** — Reads the monolithic `outputs/ash_ff_2026b.nc` and writes CarbonTracker-format per-year and per-month files. Automatically called by `post_process_2026b.py`, but can also be run standalone.
+**`split_ct_2026b.py`** — Reads the monolithic `outputs/gml_ff_co2_2026.nc` and writes CarbonTracker-format per-year and per-month files. Automatically called by `post_process_2026b.py`, but can also be run standalone.
 
 Output format:
 - Time dim named `date` (midpoint of each month)
@@ -352,7 +352,7 @@ Output format:
 python split_ct_2026b.py
 ```
 
-- **Input:** `outputs/ash_ff_2026b.nc`
+- **Input:** `outputs/gml_ff_co2_2026.nc`
 - **Output:** `outputs/ct/flux1x1_ff.{YYYY}.nc` (33 files), `outputs/ct/flux1x1_ff.{YYYYMM}.nc` (396 files)
 
 Comparison checks are in `verify_2026b.ipynb` (Check 6e).
@@ -526,15 +526,15 @@ Rename this variable and adjust rates based on current projections. Cement and f
 **In `post_process_2027.py` (configuration section near top):**
 ```python
 NPZ_FILE     = "outputs/ff_monthly_2027_py.npz"
-MONOLITHIC   = "outputs/ash_ff_2027.nc"
-FILE_PREFIX  = "ash_ff_2027"
+MONOLITHIC   = "outputs/gml_ff_co2_2027.nc"
+FILE_PREFIX  = "gml_ff_co2_2027"
 YR3          = 2026  # ← final year
 ```
 Also update `SOURCE_STRING` with new data source years.
 
 **In `split_ct_2027.py` (configuration section near top):**
 ```python
-MONOLITHIC    = "outputs/ash_ff_2027.nc"
+MONOLITHIC    = "outputs/gml_ff_co2_2027.nc"
 SOURCE_STRING = "..."  # ← update data source years
 ```
 
@@ -562,5 +562,5 @@ python post_process_2027.py
 mv ff_country_2026b.py ingest_2026b.py archive/
 mv outputs/ff_monthly_2026b_py.npz archive/outputs/
 mv processed_inputs/edgar_patterns.npz archive/processed_inputs/
-# Keep outputs/ash_ff_2026b.nc for comparison by the new verify notebook
+# Keep outputs/gml_ff_co2_2026.nc for comparison by the new verify notebook
 ```

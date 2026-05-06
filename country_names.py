@@ -8,8 +8,8 @@ import json
 from pathlib import Path
 
 _BASE = Path(__file__).parent
-_CANONICAL_PATH = _BASE / 'inputs' / 'canonical_countries.csv'
-_ALIASES_PATH = _BASE / 'inputs' / 'country_aliases.json'
+_CANONICAL_PATH = _BASE / "inputs" / "canonical_countries.csv"
+_ALIASES_PATH = _BASE / "inputs" / "country_aliases.json"
 
 
 def load_canonical() -> list[str]:
@@ -18,7 +18,7 @@ def load_canonical() -> list[str]:
     with open(_CANONICAL_PATH) as f:
         for line in f:
             line = line.strip()
-            if line and not line.startswith('#'):
+            if line and not line.startswith("#"):
                 names.append(line)
     return names
 
@@ -30,7 +30,7 @@ def load_aliases(source_key: str) -> dict[str, str]:
     if source_key not in all_aliases:
         raise KeyError(f"No alias section '{source_key}' in {_ALIASES_PATH}")
     return {k: v for k, v in all_aliases[source_key].items()
-            if not k.startswith('_')}
+            if not k.startswith("_")}
 
 
 def validate_names(source_label: str, names: set[str], canonical: set[str],

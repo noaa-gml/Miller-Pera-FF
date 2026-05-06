@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""
-split_ct_2026.py — Split monolithic ash_ff_2026.nc into CarbonTracker-format
+"""split_ct_2026.py — Split monolithic gml_ff_co2_2026.nc into CarbonTracker-format
 per-year and per-month files matching the output format of split.py.
 
-Input:   outputs/ash_ff_2026.nc
+Input:   outputs/gml_ff_co2_2026.nc
 Outputs: outputs/ct/flux1x1_ff.{YYYY}.nc      (per-year,  12 months each)
          outputs/ct/flux1x1_ff.{YYYYMM}.nc    (per-month, 1  month  each)
 
@@ -26,11 +25,10 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # Configuration
 # ═══════════════════════════════════════════════════════════════════════════════
-MONOLITHIC = "outputs/ash_ff_2026.nc"
+MONOLITHIC = "outputs/gml_ff_co2_2026.nc"
 CT_DIR     = "outputs/ct"
 CT_PREFIX  = "flux1x1_ff"
 VAR_NAME   = "fossil_imp"
@@ -44,12 +42,11 @@ SOURCE_STRING = ("Miller-Pera FF 2026, 1993 country bounds. "
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def build_carbontracker_dataset(ds_in):
-    """
-    Transform the monolithic dataset into CarbonTracker delivery format:
-      - time → 'date' (midpoint of each month)
-      - date_bounds, decimal_date, date_components, calendar_components
-      - CarbonTracker global attributes
-      - Only fossil_imp (no diagnostics)
+    """Transform the monolithic dataset into CarbonTracker delivery format:
+    - time → 'date' (midpoint of each month)
+    - date_bounds, decimal_date, date_components, calendar_components
+    - CarbonTracker global attributes
+    - Only fossil_imp (no diagnostics)
     """
     # Keep fossil_imp plus lat/lon bounds so bounds attributes aren't dangling
     keep_vars = [VAR_NAME]

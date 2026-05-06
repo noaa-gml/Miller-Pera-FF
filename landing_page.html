@@ -68,10 +68,12 @@
 <p>The datasets linked here are in support of:</p>
 
 <div class="citation">
-Gridded 1&deg; &times; 1&deg; monthly fossil-fuel CO&#8322; emission estimates (1993&ndash;2025) for use as prior fluxes in NOAA GML atmospheric inversion systems. Pera, Jacobson, and Miller, NOAA Global Monitoring Laboratory, 2026.
+Gridded 1&deg; &times; 1&deg; monthly fossil-fuel CO&#8322; emission estimates (1993&ndash;2025) for use as fluxes in atmospheric inversion systems. Version 2026 (March 2026). Pera, Jacobson, and Miller, NOAA Global Monitoring Laboratory.
 </div>
 
-<p>This product combines national inventories from CDIAC at AppState, the Energy Institute Statistical Review, and USGS Mineral Commodity Summaries with spatial patterns from EDGAR v8.0 to produce sector-resolved, monthly gridded emissions on a global 1&deg; &times; 1&deg; grid.</p>
+<p>This product combines national inventories from CDIAC at AppState, the Energy Institute Statistical Review, and USGS Mineral Commodity Summaries with spatial patterns from EDGAR v8.0 to produce monthly gridded emissions on a global 1&deg; &times; 1&deg; grid for fossil fuel emissions broken down by CDIAC categories: solid/coal, liquid/petroleum, gas/natural gas, flaring, cement, and bunker fuels.</p>
+
+<p><a href="methodology.html"><strong>&rarr; Read the full methodology and pipeline documentation</strong></a></p>
 
 <div class="figure-container">
   <img src="summary_figure.png" alt="Summary figure showing global fossil-fuel CO₂ emissions: (a) global totals by fuel type 1993–2025, (b) annual growth rates, and (c) spatial distribution of 2025 mean flux with top-emitting industrial zones.">
@@ -88,7 +90,7 @@ Gridded 1&deg; &times; 1&deg; monthly fossil-fuel CO&#8322; emission estimates (
 <h2>outputs/</h2>
 <p>Monthly, gridded, 1&deg; &times; 1&deg; fossil-fuel CO&#8322; flux fields in CF-compliant netCDF format:</p>
 <ul>
-  <li><strong>ash_ff_2026.nc</strong> &mdash; Monolithic file containing all years (1993&ndash;2025) in a single dataset.</li>
+  <li><strong>gml_ff_co2_2026.nc</strong> &mdash; Monolithic file containing all years (1993&ndash;2025) in a single dataset.</li>
   <li><strong>ct/</strong> &mdash; CarbonTracker-format files: 33 per-year files and 396 per-month files for direct use in inversion systems.</li>
   <li><strong>summary_figure.png</strong> &mdash; Overview figure shown above.</li>
 </ul>

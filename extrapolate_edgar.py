@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-extrapolate_edgar.py — Extrapolate EDGAR gridded CO₂ fluxes beyond the last
+"""extrapolate_edgar.py — Extrapolate EDGAR gridded CO₂ fluxes beyond the last
 available year using an empirically-derived annual growth rate.
 
 EDGAR releases lag real-time by ~2 years.  This script creates "FAKE" files

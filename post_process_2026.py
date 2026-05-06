@@ -1,10 +1,9 @@
 #!/usr/bin/env python
-"""
-post_process_2026.py — Convert gridded emissions to NetCDF for CarbonTracker.
+"""post_process_2026.py — Convert gridded emissions to NetCDF for CarbonTracker.
 
 Input:   outputs/ff_monthly_2026_py.npz  (from ff_country_2026.py)
-Outputs: outputs/ash_ff_2026.nc                   (monolithic, all years)
-         outputs/yearly/ash_ff_2026.{YYYY}.nc      (per-year, for TM5)
+Outputs: outputs/gml_ff_co2_2026.nc                   (monolithic, all years)
+         outputs/yearly/gml_ff_co2_2026.{YYYY}.nc      (per-year, for TM5)
 
 Workflow:
   1. Load .npz, convert Gg C → mol/m²/s
@@ -24,17 +23,16 @@ Units:         mol m-2 s-1   (Fortran multiplies by 12e-3 * spm → kgC/m²/mont
 
 import os
 import sys
-from datetime import datetime, timezone, date, time as dtime
+from datetime import date, datetime, timezone
+from datetime import time as dtime
 
+import cf_xarray.units
 import numpy as np
-import xarray as xr
 
 # pint / CF-aware xarray — import order matters
-import pint_xarray
-import cf_xarray as cfxr
-import cf_xarray.units
-import xcdat  # monkey-patches for bounds
-
+import pint_xarray  # noqa: F401  # registers the .pint accessor on xarray
+import xarray as xr
+import xcdat  # noqa: F401  # monkey-patches .bounds.add_time_bounds onto xarray
 import xesmf as xe
 from dateutil.relativedelta import relativedelta
 
@@ -46,8 +44,8 @@ xr.set_options(keep_attrs=True)
 # ═══════════════════════════════════════════════════════════════════════════════
 NPZ_FILE      = "outputs/ff_monthly_2026_py.npz"
 YEARLY_DIR    = "outputs/yearly"
-MONOLITHIC    = "outputs/ash_ff_2026.nc"
-FILE_PREFIX   = "ash_ff_2026"          # yearly files: {prefix}.{YYYY}.nc
+MONOLITHIC    = "outputs/gml_ff_co2_2026.nc"
+FILE_PREFIX   = "gml_ff_co2_2026"          # yearly files: {prefix}.{YYYY}.nc
 VAR_NAME      = "fossil_imp"           # main variable (matches Fortran rc)
 YR1           = 1993                   # first year in data
 YR3           = 2025                   # last year in data
@@ -343,8 +341,8 @@ def main():
         cwd=script_dir,
     )
 
-    print(f"\n  Done.  Per-year files ready for TM5.")
-    print(f"  Fortran rc settings:")
+    print("\n  Done.  Per-year files ready for TM5.")
+    print("  Fortran rc settings:")
     print(f"    ff.input.dir      = <path to {YEARLY_DIR}>")
     print(f"    ff.ncfile.prefix  = {FILE_PREFIX}")
     print(f"    ff.ncfile.varname = {VAR_NAME}")
@@ -369,7 +367,7 @@ def _cross_validate_with_pint(raw_llt, fossil_tll, times, lat, lon, areas_m2):
     ).pint.quantify("km**2")  # m2 -> km2 to match pint conversion chain
 
     year_lengths = xr.DataArray(
-        [seconds_in_year(t.year) for t in times], dims=["time"]
+        [seconds_in_year(t.year) for t in times], dims=["time"],
     ).pint.quantify("s")
 
     pint_result = (da / c_molar / areas_pint / year_lengths).pint.to("mol / m**2 / s")
