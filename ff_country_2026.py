@@ -173,8 +173,10 @@ def _piqs(x: np.ndarray, ybar: np.ndarray) -> np.ndarray:
     off_up   = delta[:n - 2].copy()         # super-diagonal
     off_down = delta[2:n].copy()            # sub-diagonal
 
-    g1 = np.zeros(n - 1);  g1[0]  = -delta[1]
-    g2 = np.zeros(n - 1);  g2[-1] = -delta[-2]
+    g1 = np.zeros(n - 1)
+    g1[0]  = -delta[1]
+    g2 = np.zeros(n - 1)
+    g2[-1] = -delta[-2]
     g3 = 3.0 * (delta[:n - 1].reshape(-1, *ones) * ybar[1:]
               + delta[1:n].reshape(-1, *ones)     * ybar[:-1])
 
@@ -186,8 +188,10 @@ def _piqs(x: np.ndarray, ybar: np.ndarray) -> np.ndarray:
         g3[i]   -= m * g3[i - 1]
 
     # Back-substitution → f1·y[0] + f2·y[n] + f3 = y_interior
-    f1 = np.zeros(n + 1);  f1[0] = 1.0
-    f2 = np.zeros(n + 1);  f2[n] = 1.0
+    f1 = np.zeros(n + 1)
+    f1[0] = 1.0
+    f2 = np.zeros(n + 1)
+    f2[n] = 1.0
     f3 = np.zeros((n + 1,) + pixel_shape)
 
     f1[n - 1] = g1[-1] / diag[-1]
@@ -311,7 +315,7 @@ def _load_cdiac_national(
             data[:, i, :] = sub.iloc[:, 2:8].values
 
     data = data[:, valid, :]
-    names = [n for n, v in zip(all_names, valid) if v]
+    names = [n for n, v in zip(all_names, valid, strict=True) if v]
     return data, names, len(names)
 
 
@@ -458,7 +462,6 @@ def _extrapolate_countries(
     concatenated with the extrapolated years.
     """
     n_countries = country_cdiac.shape[1]
-    n_ei_yrs = ei_ratios.shape[0]
     base = country_cdiac[-1, :, :]                     # (n_countries, 6)
 
     addarr = np.zeros((n_extrap_yrs, n_countries, _NSECTORS))

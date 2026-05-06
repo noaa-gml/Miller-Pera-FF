@@ -19,16 +19,15 @@ Outputs:
 """
 
 import json
-from datetime import datetime
+import warnings
+from datetime import UTC, datetime
 from glob import glob
 from itertools import product
 
-import numpy as np
-import pandas as pd
-
-pd.set_option("future.no_silent_downcasting", True)
 import cf_xarray as cfxr  # noqa: F401 — not side-effect free
 import cf_xarray.units
+import numpy as np
+import pandas as pd
 import pint  # noqa: F401 — must be imported before pint_xarray
 import pint_xarray  # noqa: F401
 import xarray as xr
@@ -38,6 +37,7 @@ from xarray import open_mfdataset
 
 from country_names import load_aliases, load_canonical, validate_names
 
+pd.set_option("future.no_silent_downcasting", True)
 xr.set_options(keep_attrs=True)
 
 
@@ -168,7 +168,10 @@ def _read_ei_global(sheet, skipfooter):
 
 def seconds_in_year(year):
     """Seconds in a calendar year (doesn't handle leap seconds — unix smears them)."""
-    return datetime(year + 1, 1, 1, 0, 0, 0).timestamp() - datetime(year, 1, 1, 0, 0, 0).timestamp()
+    return (
+        datetime(year + 1, 1, 1, tzinfo=UTC).timestamp()
+        - datetime(year, 1, 1, tzinfo=UTC).timestamp()
+    )
 
 
 def _load_and_regrid_edgar(
@@ -658,9 +661,8 @@ def main():
     # ─────────────────────────────────────────────────────────────────────────
     print("8. EDGAR (sector-specific spatial patterns) ...")
 
-    import warnings as _w
-    with _w.catch_warnings():
-        _w.filterwarnings("ignore", message=".*cannot be divided by.*", category=UserWarning)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*cannot be divided by.*", category=UserWarning)
         grid_01x01 = xe.util.grid_global(.1, .1, cf=True)
     grid_01x01_areas = xr.DataArray(
         xe.util.cell_area(grid_01x01, earth_radius=EARTH_RADIUS).to_numpy(),

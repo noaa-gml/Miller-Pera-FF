@@ -22,11 +22,13 @@ Units:         mol m-2 s-1   (Fortran multiplies by 12e-3 * spm → kgC/m²/mont
 """
 
 import os
+import subprocess
 import sys
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from datetime import time as dtime
 
 import cf_xarray.units
+import netCDF4
 import numpy as np
 
 # pint / CF-aware xarray — import order matters
@@ -62,14 +64,14 @@ SOURCE_STRING = ("Miller-Pera FF 2026, 1993 country bounds. "
 
 def seconds_in_month(year: int, month: int) -> float:
     """Calendar-accurate seconds in a given month."""
-    t0 = datetime(year, month, 1)
+    t0 = datetime(year, month, 1, tzinfo=UTC)
     t1 = t0 + relativedelta(months=1)
     return (t1 - t0).total_seconds()
 
 
 def seconds_in_year(year: int) -> float:
     """Calendar-accurate seconds in a given year."""
-    return (datetime(year + 1, 1, 1) - datetime(year, 1, 1)).total_seconds()
+    return (datetime(year + 1, 1, 1, tzinfo=UTC) - datetime(year, 1, 1, tzinfo=UTC)).total_seconds()
 
 
 def cell_areas_m2(earth_radius_km: float = EARTH_RADIUS) -> np.ndarray:
@@ -86,7 +88,7 @@ def cell_areas_m2(earth_radius_km: float = EARTH_RADIUS) -> np.ndarray:
 def main():
     nyears = YR3 - YR1 + 1
     nmonths = nyears * 12
-    provenance = (f"Post-processed {datetime.now(timezone.utc).isoformat()} "
+    provenance = (f"Post-processed {datetime.now(UTC).isoformat()} "
                   f"by {os.path.basename(__file__)}")
 
     global_attrs = {
@@ -125,7 +127,7 @@ def main():
     times = [datetime.combine(first_day + relativedelta(months=m), dtime.min)
              for m in range(nmonths)]
 
-    assert all(t2 > t1 for t1, t2 in zip(times, times[1:])), "Time coordinates not monotonically increasing"
+    assert all(t2 > t1 for t1, t2 in zip(times, times[1:], strict=True)), "Time coordinates not monotonically increasing"
     assert all(t.day == 15 for t in times), "Not all time coordinates fall on the 15th"
 
     # ------------------------------------------------------------------
@@ -333,7 +335,6 @@ def main():
     # ------------------------------------------------------------------
     # 9. Write CarbonTracker-format per-year & per-month files
     # ------------------------------------------------------------------
-    import subprocess
     print("\nRunning split_ct_2026.py for CarbonTracker-format output ...")
     script_dir = os.path.dirname(os.path.abspath(__file__))
     subprocess.check_call(
@@ -392,7 +393,6 @@ def _annual_pgc(data_yr, areas_m2, yr):
 
 def _assert_dim_order(filepath: str, varname: str):
     """Open a netCDF and assert dimension order is (time, lat, lon)."""
-    import netCDF4
     nc = netCDF4.Dataset(filepath, "r")
     dims = nc.variables[varname].dimensions
     nc.close()

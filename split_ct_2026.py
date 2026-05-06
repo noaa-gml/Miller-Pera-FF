@@ -19,7 +19,7 @@ CarbonTracker conventions (matching split.py):
 
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import numpy as np
 import pandas as pd
@@ -68,9 +68,9 @@ def build_carbontracker_dataset(ds_in):
     # decimal_date — leap-year aware
     def _decimal_year(dt64):
         """Convert datetime64 to decimal year, accounting for leap years."""
-        dt = pd.Timestamp(dt64).to_pydatetime().replace(tzinfo=timezone.utc)
-        year_start = datetime(dt.year, 1, 1, tzinfo=timezone.utc)
-        year_end = datetime(dt.year + 1, 1, 1, tzinfo=timezone.utc)
+        dt = pd.Timestamp(dt64).to_pydatetime().replace(tzinfo=UTC)
+        year_start = datetime(dt.year, 1, 1, tzinfo=UTC)
+        year_end = datetime(dt.year + 1, 1, 1, tzinfo=UTC)
         frac = (dt - year_start).total_seconds() / (year_end - year_start).total_seconds()
         return dt.year + frac
 
@@ -132,7 +132,7 @@ def build_carbontracker_dataset(ds_in):
         "institution": "NOAA Earth System Research Laboratory",
         "Conventions": "CF-1.9",
         "history": (
-            f"Created on {datetime.now(timezone.utc).isoformat()}\n"
+            f"Created on {datetime.now(UTC).isoformat()}\n"
             f"by script {os.path.basename(__file__)}"
         ),
         "Source": f"Miller-Pera fossil fuel emissions estimate — {SOURCE_STRING}",
@@ -177,14 +177,14 @@ def main():
 
     print(f"Writing per-year and per-month files to {CT_DIR}/ ...")
 
-    for year, ds_yr in ds_ct.groupby("date.year"):
-        year = int(year)
+    for year_key, ds_yr in ds_ct.groupby("date.year"):
+        year = int(year_key)
         yr_fname = os.path.join(CT_DIR, f"{CT_PREFIX}.{year}.nc")
         ds_yr.to_netcdf(yr_fname, encoding=ct_encoding, unlimited_dims=["date"])
         print(f"  {year}:", end="")
 
-        for month, ds_mon in ds_yr.groupby("date.month"):
-            month = int(month)
+        for month_key, ds_mon in ds_yr.groupby("date.month"):
+            month = int(month_key)
             mon_fname = os.path.join(CT_DIR, f"{CT_PREFIX}.{year}{month:02d}.nc")
             ds_mon.to_netcdf(mon_fname, encoding=ct_encoding, unlimited_dims=["date"])
             print(f" {month}", end="", flush=True)
@@ -193,7 +193,10 @@ def main():
     # --- output validation ---
     n_years_expected = n_months // 12
     all_ct = [f for f in os.listdir(CT_DIR) if f.startswith(CT_PREFIX + ".") and f.endswith(".nc")]
-    stem = lambda f: f.replace(CT_PREFIX + ".", "").replace(".nc", "")
+
+    def stem(f: str) -> str:
+        return f.replace(CT_PREFIX + ".", "").replace(".nc", "")
+
     yr_files = sorted(f for f in all_ct if len(stem(f)) == 4 and stem(f).isdigit())
     mon_files = sorted(f for f in all_ct if len(stem(f)) == 6 and stem(f).isdigit())
     assert len(yr_files) == n_years_expected, f"Expected {n_years_expected} per-year files, found {len(yr_files)}"

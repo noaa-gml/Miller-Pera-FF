@@ -16,8 +16,8 @@ def load_canonical() -> list[str]:
     """Load the 189 canonical country names in GISS-code order."""
     names = []
     with open(_CANONICAL_PATH) as f:
-        for line in f:
-            line = line.strip()
+        for raw_line in f:
+            line = raw_line.strip()
             if line and not line.startswith("#"):
                 names.append(line)
     return names

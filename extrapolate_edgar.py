@@ -16,7 +16,7 @@ Source: https://edgar.jrc.ec.europa.eu/dataset_ghg2025
 import os
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from glob import glob
 
 import numpy as np
@@ -101,7 +101,7 @@ def _empirical_growth_rate(edgar_dir, sector_tag, var_name, n_years):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def main():
-    timestamp = datetime.now(timezone.utc).isoformat()
+    timestamp = datetime.now(UTC).isoformat()
     any_written = False
 
     for sector in SECTORS:
