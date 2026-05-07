@@ -50,6 +50,15 @@
         "SOUTH SUDAN": "REPUBLIC OF SOUTH SUDAN"
     },
 
+    "CarbonMonitor_2026": {
+        "_comment": "Applied to raw CarbonMonitor names (Title Case as shipped). Maps to Title Case canonical. Aggregate rows EU27/ROW/WORLD are handled separately in ingest. Croatia and Slovenia both map to Yugoslavia per the existing CDIAC aggregation rule — when multiple CM countries share a canonical they are summed before ratios are computed (giving a partial 2-country proxy for Yugoslavia).",
+        "Italy": "Italy (Including San Marino)",
+        "Russian Federation": "Russia",
+        "United States": "United States Of America",
+        "Croatia": "Yugoslavia",
+        "Slovenia": "Yugoslavia"
+    },
+
     "EI_2024": {
         "_comment": "Applied to raw Energy Institute names (mixed case). Maps to Title Case canonical.",
         "China Hong Kong SAR": "Hong Kong",

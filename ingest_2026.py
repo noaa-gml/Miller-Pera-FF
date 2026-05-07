@@ -48,6 +48,7 @@ xr.set_options(keep_attrs=True)  # type: ignore[no-untyped-call]
 STARTING_YEAR    = 1993
 LAST_CDIAC_YEAR  = 2022
 LAST_EI_YEAR     = 2024
+LAST_CM_YEAR     = 2026  # CarbonMonitor partial-year coverage for v2026b NRT extension
 EARTH_RADIUS     = 6371.009  # km, John Miller's value
 
 CDIAC_GLOBAL_XLSX   = "inputs/CDIAC/global.1750_2022.xlsx"
@@ -57,6 +58,12 @@ EDGAR_NCS           = "inputs/TOTALS_flx_nc_2025_GHG/*.nc"
 EDGAR_NMM_NCS       = "inputs/NMM_flx_nc_2025_GHG/*.nc"
 EDGAR_PRO_NCS       = "inputs/PRO_FFF_flx_nc_2025_GHG/*.nc"
 USGS_CEMENT_CSVS    = "./inputs/USGS_cement/mcs????-cement.csv"
+CM_CSV_GLOB         = "inputs/carbon_monitor/carbonmonitor-global_datas_*.csv"
+# CarbonMonitor sectors to drop before aggregating (the IDL pipeline excludes
+# both aviation channels — they're a small fraction of total and aren't well
+# matched to country-of-emission, which is what we want here).
+CM_EXCLUDED_SECTORS = {"Domestic Aviation", "International Aviation"}
+CM_AGGREGATE_ROWS   = {"EU27", "ROW", "WORLD"}
 
 EI_YEARS       = list(range(STARTING_YEAR, LAST_EI_YEAR + 1))
 EI_EXTRAP_YEARS = list(range(LAST_CDIAC_YEAR, LAST_EI_YEAR + 1))
@@ -234,6 +241,152 @@ def _load_and_regrid_edgar(
 
     print(f"  {label}: {num_years} years, shape {normalized.shape}")
     return normalized
+
+
+def _load_carbon_monitor(canonical: list[str]) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Load CarbonMonitor near-real-time emissions for v2026b NRT extrapolation.
+
+    Reads the most recent CM CSV from ``inputs/carbon_monitor/``, drops the
+    aviation sectors and the EU27 aggregate row, harmonises CM country names
+    to the canonical CDIAC list via ``country_aliases.json``, and produces
+    three DataFrames keyed on the 189 canonical country names:
+
+    * **monthly totals**  — ``MtCO2`` per country per month for the union of
+      months CM covers in 2025 and ``LAST_CM_YEAR`` (e.g., 2026-01..2026-03
+      with the May-2026 download). Used by the pipeline to derive the
+      month-over-month shape inside the partial year.
+    * **monthly ratios**  — each month ÷ January of the same year, per
+      country. The pipeline anchors Feb..Apr 2026 to its own Jan 2026 value
+      using these. Countries not directly tracked by CM get filled with the
+      ``ROW`` ratios; ``WORLD`` is preserved as a separate row for the
+      bunker/global total.
+    * **yearly proxy ratio**  — ``sum(CM[Q1 ``LAST_CM_YEAR``]) / sum(CM[Q1
+      ``LAST_CM_YEAR - 1``])`` per country. This is the only annual signal
+      derivable from the partial CM coverage; the pipeline can use it
+      (Method B) as the year-over-year scalar for the 2025→2026 step, or
+      ignore it entirely (Method A — assumed-growth) and rely only on the
+      within-year shape from monthly ratios.
+
+    Returns ``(monthly_totals, monthly_ratios, yearly_ratio)``.
+    """
+    files = sorted(glob(CM_CSV_GLOB))
+    if not files:
+        raise FileNotFoundError(
+            f"No CarbonMonitor CSV found at {CM_CSV_GLOB}. "
+            "Run download_carbon_monitor.py first.",
+        )
+    csv_path = files[-1]
+    print(f"  reading {csv_path}")
+
+    raw = pd.read_csv(csv_path)
+    raw = raw.loc[:, ~raw.columns.str.match(r"Unnamed")]
+    raw["date"] = pd.to_datetime(raw["date"], format="%d/%m/%Y")
+    raw["value"] = pd.to_numeric(raw["value"], errors="coerce")
+
+    # Drop aviation sectors and the EU27 aggregate (we have all 27 members
+    # individually). Keep ROW and WORLD as special pseudo-countries.
+    raw = raw[~raw["sector"].isin(CM_EXCLUDED_SECTORS)]
+    raw = raw[raw["country"] != "EU27"]
+
+    # Map CM names → canonical CDIAC names. Anything not aliased is taken
+    # at face value (most CM names match canonical directly).
+    aliases = load_aliases("CarbonMonitor_2026")
+    raw["canonical"] = raw["country"].replace(aliases)
+
+    # Aggregate sector → country and day → month, then group by canonical
+    # so multi-CM-name → single-canonical (e.g., Croatia + Slovenia both
+    # → Yugoslavia) sum up.
+    raw["yearmonth"] = raw["date"].dt.to_period("M")
+    monthly = (
+        raw.groupby(["canonical", "yearmonth"], observed=True)["value"]
+        .sum()
+        .unstack("yearmonth")
+        .sort_index()
+    )
+
+    # Restrict to LAST_CM_YEAR-1 (full) and LAST_CM_YEAR (partial). We need
+    # both to derive the yearly-proxy ratio.
+    keep_cols = [c for c in monthly.columns if c.year in {LAST_CM_YEAR - 1, LAST_CM_YEAR}]
+    monthly = monthly[keep_cols]
+    print(f"  CM coverage: {keep_cols[0]} .. {keep_cols[-1]}  "
+          f"({len(keep_cols)} months across {LAST_CM_YEAR - 1}-{LAST_CM_YEAR})")
+
+    # Build the canonical-keyed DataFrames. Countries not directly covered
+    # by CM (after aggregation) get the ROW row; the WORLD aggregate is
+    # also preserved as its own row for use by the bunker/global total.
+    if "ROW" not in monthly.index:
+        raise ValueError("ROW row missing from CarbonMonitor data — "
+                         "cannot fall back for non-tracked countries")
+    if "WORLD" not in monthly.index:
+        raise ValueError("WORLD row missing from CarbonMonitor data — "
+                         "needed for the bunker/global ratio")
+
+    # Identify direct vs ROW-fallback for each canonical country.
+    direct = set(monthly.index) - {"ROW", "WORLD"}
+    direct_canonical = direct & set(canonical)
+    fallback_canonical = set(canonical) - direct_canonical
+    n_direct = len(direct_canonical)
+    n_fallback = len(fallback_canonical)
+    print(f"  direct CM coverage  : {n_direct} canonical countries")
+    print(f"  ROW fallback        : {n_fallback} canonical countries")
+
+    # Validate that every direct canonical name is actually canonical.
+    unknown_after_alias = direct - set(canonical)
+    if unknown_after_alias:
+        raise ValueError(
+            f"After aliasing, {len(unknown_after_alias)} CM countries do not "
+            f"map to canonical names — extend CarbonMonitor_2026 in "
+            f"country_aliases.json: {sorted(unknown_after_alias)}",
+        )
+
+    # monthly_totals: 189 canonical rows + WORLD, columns = months.
+    monthly_totals = pd.DataFrame(
+        index=[*canonical, "WORLD"], columns=keep_cols, dtype=float,
+    )
+    row_row = monthly.loc["ROW"]
+    for name in canonical:
+        if name in direct_canonical:
+            monthly_totals.loc[name] = monthly.loc[name]
+        else:
+            monthly_totals.loc[name] = row_row
+    monthly_totals.loc["WORLD"] = monthly.loc["WORLD"]
+    monthly_totals.columns.name = "yearmonth"
+
+    # monthly_ratios: each month's value / January of the same year, per row.
+    # For LAST_CM_YEAR-1 we anchor on Jan of LAST_CM_YEAR-1; for LAST_CM_YEAR
+    # we anchor on Jan of LAST_CM_YEAR. NaN where Jan is missing or zero.
+    monthly_ratios = monthly_totals.copy()
+    for yr in {LAST_CM_YEAR - 1, LAST_CM_YEAR}:
+        cols_yr = [c for c in keep_cols if c.year == yr]
+        if not cols_yr:
+            continue
+        jan = pd.Period(year=yr, month=1, freq="M")
+        if jan not in cols_yr:
+            # No Jan available for this year — leave as NaN.
+            continue
+        anchor = monthly_totals[jan]
+        anchor_safe = anchor.where(anchor > 0)
+        for c in cols_yr:
+            monthly_ratios[c] = monthly_totals[c] / anchor_safe
+
+    # yearly_ratio (proxy): sum(months in LAST_CM_YEAR) / sum(same months in LAST_CM_YEAR-1).
+    cy = [c for c in keep_cols if c.year == LAST_CM_YEAR]
+    cy_prev = [pd.Period(year=LAST_CM_YEAR - 1, month=p.month, freq="M") for p in cy]
+    cy_prev = [p for p in cy_prev if p in keep_cols]
+    if cy and cy_prev:
+        num = monthly_totals[cy].sum(axis="columns")
+        den = monthly_totals[cy_prev].sum(axis="columns")
+        ratio = (num / den.where(den > 0)).rename("yearly_ratio_proxy")
+    else:
+        ratio = pd.Series(np.nan, index=monthly_totals.index, name="yearly_ratio_proxy")
+    months_str = ", ".join(str(p) for p in cy)
+    yearly_ratio = pd.DataFrame({
+        "yearly_ratio_proxy": ratio,
+        "covered_months": months_str,
+        "is_direct": [n in direct_canonical or n == "WORLD" for n in monthly_totals.index],
+    })
+
+    return monthly_totals, monthly_ratios, yearly_ratio
 
 
 # =============================================================================
@@ -654,6 +807,21 @@ def main() -> None:
 
     cement_ratios.to_csv("processed_inputs/USGS_cement_ratios_2020-2026.csv")
     print(f"  {len(total_cement)} nation-years, {len(cement_ratios)} ratios")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # 7b. CarbonMonitor near-real-time monthly data (for v2026b NRT extension)
+    # Source: https://carbonmonitor.org/  (download via download_carbon_monitor.py)
+    # Used to fill in Feb..Apr 2026 in the partial-year extension. Two
+    # outputs: a per-country yearly-ratio proxy (Q1 2026 / Q1 2025) for
+    # Method B's annual baseline, and per-country monthly ratios within
+    # 2026 (each month / Jan 2026) for the within-year shape.
+    # ─────────────────────────────────────────────────────────────────────────
+    print("7b. CarbonMonitor (NRT for v2026b extension) ...")
+    cm_canonical = CDIAC_countries.tolist()
+    cm_monthly_totals, cm_monthly_ratios, cm_yearly_ratio = _load_carbon_monitor(cm_canonical)
+    cm_monthly_totals.to_csv("processed_inputs/CM_monthly_totals_2025-2026.csv")
+    cm_monthly_ratios.to_csv("processed_inputs/CM_monthly_ratios_2025-2026.csv")
+    cm_yearly_ratio.to_csv("processed_inputs/CM_yearly_ratio_proxy_2026.csv")
 
     # ─────────────────────────────────────────────────────────────────────────
     # 8. EDGAR emissions for spatial patterning (sector-specific)
