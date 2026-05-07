@@ -1,9 +1,16 @@
 #!/usr/bin/env python
 """post_process_2026.py — Convert gridded emissions to NetCDF for CarbonTracker.
 
-Input:   outputs/ff_monthly_2026_py.npz  (from ff_country_2026.py)
-Outputs: outputs/gml_ff_co2_2026.nc                   (monolithic, all years)
-         outputs/yearly/gml_ff_co2_2026.{YYYY}.nc      (per-year, for TM5)
+For the v2026b NRT extension this script is run twice, once per
+``ff_country_2026.py`` method:
+
+    python post_process_2026.py --method assumed
+    python post_process_2026.py --method cm_yearly
+
+Input :  outputs/ff_monthly_2026b_<method>_py.npz   (from ff_country_2026.py)
+Outputs: outputs/gml_ff_co2_2026b_<method>.nc       (monolithic, partial-year)
+         outputs/yearly/gml_ff_co2_2026b_<method>.{YYYY}.nc
+                                                    (per-year, full years only)
 
 Workflow:
   1. Load .npz, convert Gg C → mol/m²/s
@@ -21,11 +28,13 @@ Variable name: 'fossil_imp'  (Fortran rc key  ff.ncfile.varname = fossil_imp)
 Units:         mol m-2 s-1   (Fortran multiplies by 12e-3 * spm → kgC/m²/month)
 """
 
+import argparse
 import os
 import subprocess
 import sys
 from datetime import UTC, date, datetime
 from datetime import time as dtime
+from typing import Literal
 
 import cf_xarray.units
 import netCDF4
@@ -44,18 +53,18 @@ xr.set_options(keep_attrs=True)  # type: ignore[no-untyped-call]
 # ═══════════════════════════════════════════════════════════════════════════════
 # Configuration — edit these for each new year
 # ═══════════════════════════════════════════════════════════════════════════════
-NPZ_FILE      = "outputs/ff_monthly_2026_py.npz"
 YEARLY_DIR    = "outputs/yearly"
-MONOLITHIC    = "outputs/gml_ff_co2_2026.nc"
-FILE_PREFIX   = "gml_ff_co2_2026"          # yearly files: {prefix}.{YYYY}.nc
 VAR_NAME      = "fossil_imp"           # main variable (matches Fortran rc)
 YR1           = 1993                   # first year in data
-YR3           = 2025                   # last year in data
+YR3           = 2026                   # last year in data (partial — through April only)
 EARTH_RADIUS  = 6371.009              # km  (John Miller's value)
 C_MOLAR_MASS  = 12.011                # g/mol
-SOURCE_STRING = ("Miller-Pera FF 2026, 1993 country bounds. "
-                 "CDIAC-AppState 2021; EI 2025; EDGAR 2025 GHG; "
-                 "USGS MCS Cement 2025")
+SOURCE_STRING = ("Miller-Pera FF 2026b, 1993 country bounds. "
+                 "CDIAC-AppState 2022; EI 2025; EDGAR 2025 GHG; "
+                 "USGS MCS Cement 2026; CarbonMonitor NRT through "
+                 "April 2026 (per Andy Jacobson's request).")
+CM_METHODS = ("assumed", "cm_yearly")
+CMMethod = Literal["assumed", "cm_yearly"]
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -85,11 +94,19 @@ def cell_areas_m2(earth_radius_km: float = EARTH_RADIUS) -> np.ndarray:
 # Main
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def main() -> None:
-    nyears = YR3 - YR1 + 1
-    nmonths = nyears * 12
+def main(method: CMMethod = "assumed") -> None:
+    if method not in CM_METHODS:
+        raise ValueError(f"Unknown method {method!r}; expected one of {CM_METHODS}")
+    npz_file = f"outputs/ff_monthly_2026b_{method}_py.npz"
+    monolithic = f"outputs/gml_ff_co2_2026b_{method}.nc"
+    file_prefix = f"gml_ff_co2_2026b_{method}"
+
+    nyears_full = YR3 - YR1                       # 33 (1993..2025 inclusive)
+    nyears_in_npz = nyears_full + 1               # 34 (npz carries Dec 2026 too)
+    nmonths_full = nyears_full * 12               # 396
     provenance = (f"Post-processed {datetime.now(UTC).isoformat()} "
-                  f"by {os.path.basename(__file__)}")
+                  f"by {os.path.basename(__file__)} "
+                  f"(method={method})")
 
     global_attrs = {
         "title":       "Miller-Pera Fossil Fuel CO2 prior estimates for CarbonTracker",
@@ -97,17 +114,28 @@ def main() -> None:
         "history":     f"Created by ff_country_2026.py + {os.path.basename(__file__)}\n{provenance}",
         "institution": "NOAA Global Monitoring Laboratory",
         "Conventions": "CF-1.8",
+        "v2026b_annual_method": method,
     }
 
     # ------------------------------------------------------------------
     # 1. Load Python .npz (produced by ff_country_2026.py)
     # ------------------------------------------------------------------
-    print(f"Loading {NPZ_FILE} ...")
-    npz = np.load(NPZ_FILE)
-    assert "ff_monthly" in npz, f"Expected key 'ff_monthly' in {NPZ_FILE}, found: {list(npz.keys())}"
+    print(f"Loading {npz_file} ...")
+    npz = np.load(npz_file)
+    assert "ff_monthly" in npz, f"Expected key 'ff_monthly' in {npz_file}, found: {list(npz.keys())}"
+    last_cm_year = int(npz["last_cm_year"])
+    last_output_month = int(npz["last_output_month"])
+    last_output_idx = (last_cm_year - YR1) * 12 + last_output_month
+    nmonths_npz = nyears_in_npz * 12              # 408
     raw_tll = npz["ff_monthly"].astype(np.float64)  # (time, lon, lat) from Python
-    assert raw_tll.shape == (nmonths, 360, 180), (
-        f"Expected ff_monthly shape ({nmonths}, 360, 180), got {raw_tll.shape}")
+    assert raw_tll.shape == (nmonths_npz, 360, 180), (
+        f"Expected ff_monthly shape ({nmonths_npz}, 360, 180), got {raw_tll.shape}")
+    # Truncate to LAST_OUTPUT_MONTH of LAST_CM_YEAR (e.g. April 2026)
+    raw_tll = raw_tll[:last_output_idx]
+    nmonths = last_output_idx                     # 400
+    n_partial_months = last_output_idx - nmonths_full  # 4 (Jan..Apr 2026)
+    print(f"  trimmed to {nmonths} months: {nyears_full} full years + "
+          f"{n_partial_months} months in {last_cm_year}")
     # Transpose to (lat, lon, time) to match the rest of the pipeline
     raw_llt = raw_tll.transpose(2, 1, 0)  # (time, lon, lat) -> (lat, lon, time)
     assert raw_llt.shape == (180, 360, nmonths)
@@ -156,10 +184,19 @@ def main() -> None:
     Gg_to_mol = 1e9 / C_MOLAR_MASS
 
     fossil_llt = np.empty_like(raw_llt)
-    for yr_idx in range(nyears):
+    # Full years 1993..(YR3-1) get a complete 12-month slice each.
+    for yr_idx in range(nyears_full):
         yr = YR1 + yr_idx
         sec_yr = seconds_in_year(yr)
         t0, t1 = yr_idx * 12, (yr_idx + 1) * 12
+        fossil_llt[:, :, t0:t1] = raw_llt[:, :, t0:t1] * Gg_to_mol / areas[:, :, np.newaxis] / sec_yr
+    # Partial year (YR3, e.g. 2026): only the first n_partial_months are populated.
+    # Same Gg-C/yr→mol/m²/s factor — sec_yr is the divisor for the *yearly rate*
+    # the npz carries, regardless of how many months we keep.
+    if n_partial_months > 0:
+        sec_yr = seconds_in_year(YR3)
+        t0 = nmonths_full
+        t1 = nmonths_full + n_partial_months
         fossil_llt[:, :, t0:t1] = raw_llt[:, :, t0:t1] * Gg_to_mol / areas[:, :, np.newaxis] / sec_yr
 
     # *** THE REORDER -- everything downstream uses this ***
@@ -216,10 +253,10 @@ def main() -> None:
         [seconds_in_month(t.year, t.month) for t in times], dims=["time"],
     ).pint.quantify("s")
 
-    # month-lengths should sum to year-lengths for each year
+    # month-lengths should sum to year-lengths for each FULL year only.
     ml_raw = month_lengths.pint.dequantify().values
     yl_raw = year_lengths.pint.dequantify().values
-    for yr_idx in range(nyears):
+    for yr_idx in range(nyears_full):
         t0, t1 = yr_idx * 12, (yr_idx + 1) * 12
         ml_sum = ml_raw[t0:t1].sum()
         yr_val = yl_raw[t0]
@@ -248,20 +285,22 @@ def main() -> None:
     # ------------------------------------------------------------------
     # 6. Write monolithic file
     # ------------------------------------------------------------------
-    print(f"Writing monolithic file {MONOLITHIC} ...")
-    ds.pint.dequantify().to_netcdf(MONOLITHIC)
-    print(f"  Wrote {MONOLITHIC}  {VAR_NAME} shape={ds[VAR_NAME].shape}  dims={ds[VAR_NAME].dims}")
-    _assert_dim_order(MONOLITHIC, VAR_NAME)
+    print(f"Writing monolithic file {monolithic} ...")
+    ds.pint.dequantify().to_netcdf(monolithic)
+    print(f"  Wrote {monolithic}  {VAR_NAME} shape={ds[VAR_NAME].shape}  dims={ds[VAR_NAME].dims}")
+    _assert_dim_order(monolithic, VAR_NAME)
 
     # Round-trip: read back and verify values survive encoding
-    ds_rt = xr.open_dataset(MONOLITHIC)
+    ds_rt = xr.open_dataset(monolithic)
     max_rt_err = float(np.max(np.abs(ds_rt[VAR_NAME].values - fossil)))
     ds_rt.close()
     assert max_rt_err < 1e-20, f"Monolithic round-trip error: max abs diff = {max_rt_err:.2e}"
     print(f"  Round-trip OK (max abs diff {max_rt_err:.2e})")
 
     # ------------------------------------------------------------------
-    # 7. Split per-year files FROM the same dataset
+    # 7. Split per-year files FROM the same dataset (full years only —
+    #    skip the partial last year, which is delivered via per-month CT
+    #    files instead)
     # ------------------------------------------------------------------
     os.makedirs(YEARLY_DIR, exist_ok=True)
     print(f"\nWriting per-year files to {YEARLY_DIR}/ ...")
@@ -278,13 +317,13 @@ def main() -> None:
     }
 
     pgc_per_year = []
-    for yr_idx in range(nyears):
+    for yr_idx in range(nyears_full):
         yr = YR1 + yr_idx
         t0, t1 = yr_idx * 12, (yr_idx + 1) * 12
 
         # Slice directly from the canonical dataset
         ds_yr = ds_dq[[VAR_NAME]].isel(time=slice(t0, t1))
-        fname = os.path.join(YEARLY_DIR, f"{FILE_PREFIX}.{yr:04d}.nc")
+        fname = os.path.join(YEARLY_DIR, f"{file_prefix}.{yr:04d}.nc")
         ds_yr.to_netcdf(fname, encoding=encoding_template, unlimited_dims=["time"])
 
         # Sanity: back-compute annual PgC
@@ -292,10 +331,19 @@ def main() -> None:
         pgc_per_year.append(yr_pgc)
         print(f"  {fname}  {yr_pgc:.4f} PgC")
 
-    pgc_total = sum(pgc_per_year)
-    print(f"\n  Total: {pgc_total:.2f} PgC  (mean {pgc_total / nyears:.2f} PgC/yr)")
+    if n_partial_months > 0:
+        # Diagnostic only — no per-year file for the partial last year.
+        t0 = nmonths_full
+        t1 = nmonths_full + n_partial_months
+        partial_pgc = _annual_pgc_partial(fossil[t0:t1], areas, YR3, n_partial_months)
+        print(f"  (partial {YR3} Jan..month {n_partial_months}: {partial_pgc:.4f} PgC — "
+              "no per-year file written; CT per-month files cover this range)")
 
-    # Global total bounds: each year should be 5-15 PgC
+    pgc_total = sum(pgc_per_year)
+    print(f"\n  Total full years: {pgc_total:.2f} PgC  "
+          f"(mean {pgc_total / nyears_full:.2f} PgC/yr)")
+
+    # Global total bounds: each FULL year should be 5-15 PgC
     for yr_idx, yr_pgc in enumerate(pgc_per_year):
         assert 5.0 < yr_pgc < 15.0, (
             f"Year {YR1 + yr_idx}: {yr_pgc:.4f} PgC outside plausible range [5, 15]")
@@ -308,13 +356,14 @@ def main() -> None:
             f"({pgc_per_year[i - 1]:.4f} -> {pgc_per_year[i]:.4f} PgC)")
     print("  Global totals OK (5-15 PgC/yr, <20% year-over-year change)")
 
-    # Per-year file count
-    yearly_files = [f for f in os.listdir(YEARLY_DIR) if f.startswith(FILE_PREFIX) and f.endswith(".nc")]
-    assert len(yearly_files) == nyears, (
-        f"Expected {nyears} yearly files, found {len(yearly_files)}")
+    # Per-year file count (full years only)
+    yearly_files = [f for f in os.listdir(YEARLY_DIR)
+                    if f.startswith(file_prefix) and f.endswith(".nc")]
+    assert len(yearly_files) == nyears_full, (
+        f"Expected {nyears_full} yearly files for {file_prefix}, found {len(yearly_files)}")
 
     # Per-year round-trip: spot-check first year
-    first_yr_file = os.path.join(YEARLY_DIR, f"{FILE_PREFIX}.{YR1:04d}.nc")
+    first_yr_file = os.path.join(YEARLY_DIR, f"{file_prefix}.{YR1:04d}.nc")
     ds_yr_rt = xr.open_dataset(first_yr_file)
     assert len(ds_yr_rt.time) == 12, f"First-year file has {len(ds_yr_rt.time)} time steps, expected 12"
     orig_slice = fossil[:12]
@@ -330,22 +379,23 @@ def main() -> None:
     # ------------------------------------------------------------------
     # 8. Final dimension-order assertion on a per-year file
     # ------------------------------------------------------------------
-    _assert_dim_order(os.path.join(YEARLY_DIR, f"{FILE_PREFIX}.{YR1:04d}.nc"), VAR_NAME)
+    _assert_dim_order(os.path.join(YEARLY_DIR, f"{file_prefix}.{YR1:04d}.nc"), VAR_NAME)
 
     # ------------------------------------------------------------------
     # 9. Write CarbonTracker-format per-year & per-month files
     # ------------------------------------------------------------------
-    print("\nRunning split_ct_2026.py for CarbonTracker-format output ...")
+    print(f"\nRunning split_ct_2026.py --method {method} for CT-format output ...")
     script_dir = os.path.dirname(os.path.abspath(__file__))
     subprocess.check_call(
-        [sys.executable, os.path.join(script_dir, "split_ct_2026.py")],
+        [sys.executable, os.path.join(script_dir, "split_ct_2026.py"),
+         "--method", method],
         cwd=script_dir,
     )
 
     print("\n  Done.  Per-year files ready for TM5.")
     print("  Fortran rc settings:")
     print(f"    ff.input.dir      = <path to {YEARLY_DIR}>")
-    print(f"    ff.ncfile.prefix  = {FILE_PREFIX}")
+    print(f"    ff.ncfile.prefix  = {file_prefix}")
     print(f"    ff.ncfile.varname = {VAR_NAME}")
 
 
@@ -398,6 +448,17 @@ def _annual_pgc(data_yr: np.ndarray, areas_m2: np.ndarray, yr: int) -> float:
     return total_mol * C_MOLAR_MASS * 1e-15  # mol -> g -> Pg
 
 
+def _annual_pgc_partial(
+    data_partial: np.ndarray, areas_m2: np.ndarray, yr: int, n_months: int,
+) -> float:
+    """Sum PgC over the first *n_months* of *yr* (used for the partial last year)."""
+    total_mol = 0.0
+    for m in range(n_months):
+        spm = seconds_in_month(yr, m + 1)
+        total_mol += float(np.sum(data_partial[m] * areas_m2)) * spm
+    return total_mol * C_MOLAR_MASS * 1e-15
+
+
 def _assert_dim_order(filepath: str, varname: str) -> None:
     """Open a netCDF and assert dimension order is (time, lat, lon)."""
     nc = netCDF4.Dataset(filepath, "r")
@@ -411,4 +472,9 @@ def _assert_dim_order(filepath: str, varname: str) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
+    parser.add_argument(
+        "--method", choices=CM_METHODS, default="assumed",
+        help="Which v2026b annual-baseline method to post-process.",
+    )
+    main(method=parser.parse_args().method)

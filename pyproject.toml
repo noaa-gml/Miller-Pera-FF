@@ -37,6 +37,7 @@ ignore = [
 
     # ── Pandas style preferences (we use the older idioms intentionally) ────
     "PD002",    # avoid inplace=True
+    "PD008",    # .loc over .at (.at is fine for scalar; faster, more explicit)
     "PD010",    # .pivot_table over .pivot
     "PD011",    # .to_numpy() over .values
     "PD013",    # .melt over .stack

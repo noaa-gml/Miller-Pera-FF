@@ -17,10 +17,11 @@ CarbonTracker conventions (matching split.py):
   - Unlimited 'date' dimension
 """
 
+import argparse
 import os
 import sys
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -29,13 +30,13 @@ import xarray as xr
 # ═══════════════════════════════════════════════════════════════════════════════
 # Configuration
 # ═══════════════════════════════════════════════════════════════════════════════
-MONOLITHIC = "outputs/gml_ff_co2_2026.nc"
-CT_DIR     = "outputs/ct"
-CT_PREFIX  = "flux1x1_ff"
-VAR_NAME   = "fossil_imp"
-SOURCE_STRING = ("Miller-Pera FF 2026, 1993 country bounds. "
-                 "CDIAC-AppState 2021; EI 2025; EDGAR 2025 GHG; "
-                 "USGS MCS Cement 2025")
+CT_DIR        = "outputs/ct"
+VAR_NAME      = "fossil_imp"
+SOURCE_STRING = ("Miller-Pera FF 2026b, 1993 country bounds. "
+                 "CDIAC-AppState 2022; EI 2025; EDGAR 2025 GHG; "
+                 "USGS MCS Cement 2026; CarbonMonitor NRT through April 2026.")
+CM_METHODS = ("assumed", "cm_yearly")
+CMMethod = Literal["assumed", "cm_yearly"]
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -146,21 +147,31 @@ def build_carbontracker_dataset(ds_in: xr.Dataset) -> xr.Dataset:
 # Main
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def main() -> None:
-    if not os.path.exists(MONOLITHIC):
-        print(f"ERROR: {MONOLITHIC} not found. Run post_process_2026.py first.", file=sys.stderr)
+def main(method: CMMethod = "assumed") -> None:
+    if method not in CM_METHODS:
+        raise ValueError(f"Unknown method {method!r}; expected one of {CM_METHODS}")
+    monolithic = f"outputs/gml_ff_co2_2026b_{method}.nc"
+    ct_prefix = f"flux1x1_ff_{method}"
+
+    if not os.path.exists(monolithic):
+        print(f"ERROR: {monolithic} not found. Run "
+              f"post_process_2026.py --method {method} first.", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Loading {MONOLITHIC} ...")
-    ds_in = xr.open_dataset(MONOLITHIC)
+    print(f"Loading {monolithic} ...")
+    ds_in = xr.open_dataset(monolithic)
 
     # --- input validation ---
     for required in [VAR_NAME, "time_bnds"]:
-        assert required in ds_in, f"Required variable '{required}' not found in {MONOLITHIC}; got {list(ds_in.data_vars)}"
-    assert "time" in ds_in.dims, f"Required dimension 'time' not found in {MONOLITHIC}; got {list(ds_in.dims)}"
+        assert required in ds_in, (
+            f"Required variable '{required}' not found in {monolithic}; "
+            f"got {list(ds_in.data_vars)}")
+    assert "time" in ds_in.dims, (
+        f"Required dimension 'time' not found in {monolithic}; "
+        f"got {list(ds_in.dims)}")
     n_months = ds_in.sizes["time"]
     assert n_months > 0, "Input dataset has zero time steps"
-    assert n_months % 12 == 0, f"Expected a whole number of years (multiple of 12 months), got {n_months}"
+    # The v2026b product is partial-year — last year may have fewer than 12 months.
 
     print(f"  {VAR_NAME} shape={ds_in[VAR_NAME].shape}  dims={ds_in[VAR_NAME].dims}")
 
@@ -178,30 +189,44 @@ def main() -> None:
 
     print(f"Writing per-year and per-month files to {CT_DIR}/ ...")
 
+    n_partial_year_files = 0
     for year_key, ds_yr in ds_ct.groupby("date.year"):
         year = int(year_key)
-        yr_fname = os.path.join(CT_DIR, f"{CT_PREFIX}.{year}.nc")
-        ds_yr.to_netcdf(yr_fname, encoding=ct_encoding, unlimited_dims=["date"])
+        n_in_year = int(ds_yr.sizes["date"])
+        # Per-year file: only write for FULL years (12 months). Partial last
+        # year is delivered via per-month files only.
+        if n_in_year == 12:
+            yr_fname = os.path.join(CT_DIR, f"{ct_prefix}.{year}.nc")
+            ds_yr.to_netcdf(yr_fname, encoding=ct_encoding, unlimited_dims=["date"])
+        else:
+            n_partial_year_files += 1
+            print(f"  {year}: partial ({n_in_year} mo), skipping per-year file", end="")
         print(f"  {year}:", end="")
 
         for month_key, ds_mon in ds_yr.groupby("date.month"):
             month = int(month_key)
-            mon_fname = os.path.join(CT_DIR, f"{CT_PREFIX}.{year}{month:02d}.nc")
+            mon_fname = os.path.join(CT_DIR, f"{ct_prefix}.{year}{month:02d}.nc")
             ds_mon.to_netcdf(mon_fname, encoding=ct_encoding, unlimited_dims=["date"])
             print(f" {month}", end="", flush=True)
         print()
 
     # --- output validation ---
-    n_years_expected = n_months // 12
-    all_ct = [f for f in os.listdir(CT_DIR) if f.startswith(CT_PREFIX + ".") and f.endswith(".nc")]
+    full_years = (n_months - (n_partial_year_files * 1)) // 12  # imprecise; compute below
+    all_ct = [f for f in os.listdir(CT_DIR)
+              if f.startswith(ct_prefix + ".") and f.endswith(".nc")]
 
     def stem(f: str) -> str:
-        return f.replace(CT_PREFIX + ".", "").replace(".nc", "")
+        return f.replace(ct_prefix + ".", "").replace(".nc", "")
 
     yr_files = sorted(f for f in all_ct if len(stem(f)) == 4 and stem(f).isdigit())
     mon_files = sorted(f for f in all_ct if len(stem(f)) == 6 and stem(f).isdigit())
-    assert len(yr_files) == n_years_expected, f"Expected {n_years_expected} per-year files, found {len(yr_files)}"
-    assert len(mon_files) == n_months, f"Expected {n_months} per-month files, found {len(mon_files)}"
+    full_years = n_months // 12  # partial last year (n_months % 12 != 0) just gets fewer files
+    assert len(mon_files) == n_months, (
+        f"Expected {n_months} per-month files, found {len(mon_files)}")
+    # Per-year files: should be `full_years` (skip the partial year if any).
+    assert len(yr_files) == full_years, (
+        f"Expected {full_years} per-year files (full years only), "
+        f"found {len(yr_files)}")
 
     # spot-check: each per-year file should have 12 months
     for yf in yr_files:
@@ -211,9 +236,15 @@ def main() -> None:
         assert n == 12, f"{yf}: expected 12 months, got {n}"
 
     print(f"\nDone. CarbonTracker-format files written to {CT_DIR}/")
-    print(f"  {len(yr_files)} per-year files, {len(mon_files)} per-month files")
-    print(f"  Pattern: {CT_PREFIX}.YYYY.nc  and  {CT_PREFIX}.YYYYMM.nc")
+    print(f"  {len(yr_files)} per-year files (full years), "
+          f"{len(mon_files)} per-month files")
+    print(f"  Pattern: {ct_prefix}.YYYY.nc  and  {ct_prefix}.YYYYMM.nc")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
+    parser.add_argument(
+        "--method", choices=CM_METHODS, default="assumed",
+        help="Which v2026b annual-baseline method's monolithic to split.",
+    )
+    main(method=parser.parse_args().method)

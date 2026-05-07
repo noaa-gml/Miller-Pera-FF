@@ -39,11 +39,25 @@ Output::
 
 from __future__ import annotations
 
+import argparse
 import calendar
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import pandas as pd
+
+# v2026b NRT extension config — the two methods we try for the 2025→2026
+# annual baseline. See README / commit log for the trade-off; the pipeline
+# is run once per method and the post-processing tags the output filename.
+CM_METHODS = ("assumed", "cm_yearly")
+CMMethod = Literal["assumed", "cm_yearly"]
+# Months in `LAST_CM_YEAR` that get overwritten with `Jan_<yr> × CM_ratio`.
+# Anything not present in the CM CSV is silently skipped (e.g. April 2026
+# until the next CM update lands).
+CM_OVERWRITE_MONTHS = (2, 3, 4)
+LAST_CM_YEAR = 2026
+LAST_OUTPUT_MONTH = 4   # only output months 1..LAST_OUTPUT_MONTH of LAST_CM_YEAR
 
 # ---------------------------------------------------------------------------
 # Sector-column ordering (shared by CDIAC CSVs and all internal arrays
@@ -375,13 +389,21 @@ def _load_cement_ratios(
     global_ratios  : ``(n_cement_yrs,)`` year-over-year multipliers (world total).
 
     """
-    years = list(range(yr_cdiac, yr_final + 1))      # [2021, 2022, ..., 2025]
+    years = list(range(yr_cdiac, yr_final + 1))      # [2022, ..., yr_final]
 
     # --- per-country ratios (cumulative relative to 2020) ---
     df = pd.read_csv("processed_inputs/USGS_cement_ratios_2020-2026.csv")
     wide = df.pivot(index="Nation", columns="Year", values="cement")
     wide = wide.reindex(columns=years).reindex(country_names)
-    cumul = wide.values                              # (n_countries, 5)
+    # Forward-fill any year not yet published by USGS (e.g. 2026 in mid-2026 —
+    # the 2026 PDF only carries 2025 totals). A NaN cumulative-ratio year is
+    # filled from the previous year, giving a flat (1.0) y-o-y multiplier.
+    missing_years = [y for y in years if wide[y].isna().any()]
+    if missing_years:
+        print(f"  USGS cement: forward-filling missing years {missing_years} "
+              "(NaN → previous year, yoy ratio → 1.0)")
+        wide = wide.ffill(axis="columns")
+    cumul = wide.values                              # (n_countries, n_years)
     yoy = cumul[:, 1:] / cumul[:, :-1]              # (n_countries, n_cement_yrs)
     country_ratios = yoy.T                           # (n_cement_yrs, n_countries)
 
@@ -389,7 +411,7 @@ def _load_cement_ratios(
     full = pd.read_csv("processed_inputs/USGS_cement_2026.csv")
     world = (full[full["Nation"] == "World total (rounded)"]
              .set_index("Year")["Cement"])
-    world_vals = world.reindex(years).values.astype(float)
+    world_vals = world.reindex(years).ffill().values.astype(float)
     global_ratios = world_vals[1:] / world_vals[:-1] # (n_cement_yrs,)
 
     print(f"  {len(country_names)} countries, years {years}")
@@ -422,6 +444,13 @@ def _load_edgar_patterns(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Read sector-specific EDGAR 1×1° fractional emission patterns.
 
+    If the on-disk file has fewer years than ``n_total_yrs`` (e.g. the v2026
+    NRT extension to 2026 when the npz was built for 1993-2025), the last
+    year's pattern is replicated forward to fill the gap. This matches what
+    ``extrapolate_edgar.py`` would have produced if re-run, and is
+    equivalent for the partial-year extension where Feb-Apr 2026 will
+    later be overwritten by CarbonMonitor anyway.
+
     Returns
     -------
     fracarr : ``(n_total_yrs, 360, 180, 3)``
@@ -434,10 +463,22 @@ def _load_edgar_patterns(
     fracarr = data["fracarr"].transpose((2, 0, 1, 3))  # (180,360,yrs,3) → (yrs,180,360,3)
     # Swap lat/lon: file is (180,360) = (lat,lon), we need (360,180) = (lon,lat)
     fracarr = fracarr.transpose((0, 2, 1, 3))           # (yrs,360,180,3)
-    assert fracarr.shape == (n_total_yrs, 360, 180, 3), \
-        f"fracarr shape {fracarr.shape} != expected ({n_total_yrs}, 360, 180, 3)"
     totals = data["totals"].transpose((2, 0, 1))         # (180,360,yrs) → (yrs,180,360)
     totals = totals.transpose((0, 2, 1))                  # (yrs,360,180)
+
+    # Extend by replicating the last available year if needed.
+    n_in_file = fracarr.shape[0]
+    if n_in_file < n_total_yrs:
+        n_extend = n_total_yrs - n_in_file
+        print(f"  EDGAR fracarr in file = {n_in_file} years; "
+              f"replicating last year {n_extend}× to reach {n_total_yrs}")
+        fracarr = np.concatenate(
+            [fracarr, np.repeat(fracarr[-1:], n_extend, axis=0)], axis=0)
+        totals = np.concatenate(
+            [totals, np.repeat(totals[-1:], n_extend, axis=0)], axis=0)
+
+    assert fracarr.shape == (n_total_yrs, 360, 180, 3), \
+        f"fracarr shape {fracarr.shape} != expected ({n_total_yrs}, 360, 180, 3)"
     assert totals.shape == (n_total_yrs, 360, 180)
     return fracarr, totals
 
@@ -713,25 +754,119 @@ def _apply_seasonality(
         ff_monthly[:, eur_lon, eur_lat] *= seasffa_tiled[:, None, None]
 
 
+def _apply_cm_monthly_overwrite(
+    ff_monthly: np.ndarray,
+    country_names: list[str],
+    gissmap: np.ndarray,
+    codes_arr: np.ndarray,
+    cm_monthly_ratios: pd.DataFrame,
+    yr_start: int,
+    cm_year: int,
+    overwrite_months: tuple[int, ...],
+) -> None:
+    """Overwrite Feb..Apr (etc.) of *cm_year* using ``Jan_<cm_year> × CM ratio``.
+
+    Implements user-selected option 2 of the v2026b NRT extension: anchor
+    the partial-year tail to whatever ``Jan_<cm_year>`` came out of the
+    pipeline (assumed-growth + PIQS spline + seasonal cycle, regardless of
+    the annual baseline method) and walk forward by chaining each month's
+    CM-monthly ratio off Jan. The Jan→Feb transition is naturally smooth
+    (it's CM's own intra-year shape), and the Dec_<cm_year-1>→Jan_<cm_year>
+    transition is smooth by construction (PIQS continuity).
+
+    For each country and the grid cells assigned to it (per ``gissmap`` /
+    ``codes_arr`` — same matching rule as ``_distribute_to_grid``), the
+    target month becomes ``Jan_<cm_year> × cm_monthly_ratios[country, month]``.
+    Ocean cells (gissmap == 0) use the ``WORLD`` row instead.
+
+    Operates **in-place** on ``ff_monthly``. Months not present in
+    ``cm_monthly_ratios`` (e.g. Apr 2026 before the next CM update) are
+    silently skipped — those slots keep whatever the spline + seasonal
+    cycle produced.
+    """
+    yr_idx = cm_year - yr_start
+    jan_idx = yr_idx * 12  # absolute month index of Jan in ff_monthly
+    jan_layer = ff_monthly[jan_idx].copy()  # capture before any overwrites
+
+    gissmap_coarse = gissmap // 100 * 100
+    ocean_mask = gissmap == 0
+
+    for month in overwrite_months:
+        period_str = f"{cm_year}-{month:02d}"
+        if period_str not in cm_monthly_ratios.columns:
+            print(f"  {period_str}: not in CM data — skipping (re-run "
+                  "download_carbon_monitor.py when the next CM update lands)")
+            continue
+
+        target_idx = jan_idx + (month - 1)
+        new_layer = jan_layer.copy()
+
+        # Country-by-country: each canonical name has its own ratio (which is
+        # the ROW row for fallback countries — already filled in ingest).
+        for ci, name in enumerate(country_names):
+            ratio = cm_monthly_ratios.at[name, period_str]
+            if pd.isna(ratio):
+                continue  # nothing to overwrite for this country/month
+            code = codes_arr[ci]
+            match_map = (gissmap if (code // 100 in _SUBDIV_PREFIXES)
+                         else gissmap_coarse)
+            cells = np.where(match_map == code)
+            if len(cells[0]) == 0:
+                continue
+            new_layer[cells[0], cells[1]] = (
+                jan_layer[cells[0], cells[1]] * ratio)
+
+        # Ocean / bunker cells use the WORLD aggregate ratio.
+        world_ratio = cm_monthly_ratios.at["WORLD", period_str]
+        if not pd.isna(world_ratio):
+            new_layer[ocean_mask] = jan_layer[ocean_mask] * world_ratio
+
+        ff_monthly[target_idx] = new_layer
+        print(f"  overwrote {period_str} (idx {target_idx}) "
+              f"with Jan {cm_year} × CM ratios "
+              f"(WORLD ratio {world_ratio:.4f})")
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Main
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def main() -> None:
-    """Run the full pipeline: load → extrapolate → grid → interpolate → save."""
+def main(method: CMMethod = "assumed") -> None:
+    """Run the full pipeline: load → extrapolate → grid → interpolate → save.
+
+    The v2026b NRT extension goes through 2026 instead of 2025. Two
+    methods are supported for the 2025→2026 annual baseline:
+
+    * ``"assumed"`` — same as 2025: gas/oil +2.5%, coal/flaring +1%,
+      cement flat (USGS hasn't published 2026 yet). The current default
+      and what we already validated for 2025.
+    * ``"cm_yearly"`` — per-country ``sum(CM[Q1 2026]) / sum(CM[Q1 2025])``
+      applied uniformly across all five sectors. Countries not directly
+      tracked by CM use the ROW row (already pre-filled in ingest).
+
+    After PIQS interpolation and the seasonal cycle, ``Jan 2026`` is left
+    as-is and Feb..Apr 2026 are overwritten with
+    ``Jan_2026 × CM_monthly_ratio`` (per country, with ROW fallback;
+    ocean / bunker cells use the WORLD ratio).
+    """
+    if method not in CM_METHODS:
+        raise ValueError(f"Unknown method {method!r}; expected one of {CM_METHODS}")
+
     # ── Configuration ────────────────────────────────────────────────────
     season   = "nam"
     seas2    = "euras"
     yr_start = 1993
     yr_cdiac = 2022
     yr_ei    = 2024
-    yr_final = 2025
+    yr_final = 2026                              # was 2025; now Q1 2026 NRT
 
-    n_ei_yrs     = yr_ei - yr_cdiac            # 3
-    n_cdiac_yrs  = yr_cdiac - yr_start + 1     # 29
+    n_ei_yrs     = yr_ei - yr_cdiac            # 2
+    n_cdiac_yrs  = yr_cdiac - yr_start + 1     # 30
     n_extrap_yrs = yr_final - yr_cdiac         # 4
-    n_total_yrs  = n_cdiac_yrs + n_extrap_yrs  # 33
+    n_total_yrs  = n_cdiac_yrs + n_extrap_yrs  # 34
     fuels        = ["gas", "oil", "coal", "flaring"]
+
+    print(f"=== ff_country_2026 (v2026b)  method={method}  yr_final={yr_final} ===")
 
     # EI flaring volumes (BCM) — global ratios still needed for _extrapolate_global
     _flaring_bcm = pd.read_csv("processed_inputs/EI_flaring_bcm.csv", index_col="Year")
@@ -758,16 +893,44 @@ def main() -> None:
     ei_ratios = _load_ei_country_ratios(
         yr_cdiac, yr_ei, n_ei_yrs, n_countries, fuels)
 
-    # ── 3a′. Assumed 2025 growth rates (beyond EI coverage) ───────────
-    #   Oil +2.5%, Gas +2.5%, Coal +1%, Flaring +1%
-    _assumed_2025 = {"gas": 1.025, "oil": 1.025, "coal": 1.01, "flaring": 1.01}
-    _extra_country = np.ones((1, n_countries, len(fuels)))
+    # ── 3a′. Beyond-EI annual ratios for 2025 and 2026 ────────────────
+    #   2025: assumed growth rates applied per fuel (gas/oil +2.5%, coal/flaring +1%)
+    #         — this is what we already validated for the v2026 frozen product.
+    #   2026: depends on the chosen method:
+    #           "assumed"   → same rates compounded one more year
+    #           "cm_yearly" → per-country CM Q1-2026/Q1-2025 ratio applied
+    #                          uniformly to all four fuels (matching the IDL
+    #                          semantics — CM doesn't break down by fuel type)
+    _assumed = {"gas": 1.025, "oil": 1.025, "coal": 1.01, "flaring": 1.01}
+
+    # 2025 row (always assumed-growth)
+    extra_2025 = np.ones((1, n_countries, len(fuels)))
     for _fi, _f in enumerate(fuels):
-        _extra_country[0, :, _fi] = _assumed_2025[_f]
-    ei_ratios = np.concatenate([ei_ratios, _extra_country], axis=0)
-    frac_inc_flare = np.append(frac_inc_flare, 1.01)
-    n_ei_yrs += 1
-    print(f"  Appended assumed 2025 rates: {_assumed_2025}")
+        extra_2025[0, :, _fi] = _assumed[_f]
+
+    # 2026 row — method-dependent
+    if method == "assumed":
+        extra_2026 = np.ones((1, n_countries, len(fuels)))
+        for _fi, _f in enumerate(fuels):
+            extra_2026[0, :, _fi] = _assumed[_f]
+        flare_2026 = 1.01
+        print(f"  2025 + 2026 from assumed rates: {_assumed}")
+    else:  # method == "cm_yearly"
+        cm_yr = pd.read_csv(
+            "processed_inputs/CM_yearly_ratio_proxy_2026.csv", index_col=0)
+        extra_2026 = np.ones((1, n_countries, len(fuels)))
+        for ci, name in enumerate(country_names):
+            ratio = cm_yr.at[name, "yearly_ratio_proxy"]
+            if pd.notna(ratio):
+                extra_2026[0, ci, :] = ratio    # uniform across fuels
+        world_ratio = cm_yr.at["WORLD", "yearly_ratio_proxy"]
+        flare_2026 = float(world_ratio) if pd.notna(world_ratio) else 1.01
+        print(f"  2025 from assumed rates {_assumed}; "
+              f"2026 from CM Q1-proxy ratios (WORLD = {flare_2026:.4f})")
+
+    ei_ratios = np.concatenate([ei_ratios, extra_2025, extra_2026], axis=0)
+    frac_inc_flare = np.append(frac_inc_flare, [1.01, flare_2026])
+    n_ei_yrs += 2
 
     # ── 3b. Load USGS cement ratios (per-country) ────────────────────────
     print("Reading USGS cement ratios …")
@@ -796,9 +959,16 @@ def main() -> None:
 
     # ── 8. Add bunker fuels over ocean ───────────────────────────────────
     print("Computing bunker fuels …")
-    ei_glob_ratios = _load_ei_global_ratios(n_ei_yrs - 1, ["gas", "oil", "coal"])
-    _extra_glob = np.array([[_assumed_2025["gas"], _assumed_2025["oil"], _assumed_2025["coal"]]])
-    ei_glob_ratios = np.concatenate([ei_glob_ratios, _extra_glob], axis=0)
+    ei_glob_ratios = _load_ei_global_ratios(n_ei_yrs - 2, ["gas", "oil", "coal"])
+    # 2025 row: assumed-growth (always)
+    _extra_glob_2025 = np.array([[_assumed["gas"], _assumed["oil"], _assumed["coal"]]])
+    # 2026 row: depends on method
+    if method == "assumed":
+        _extra_glob_2026 = np.array([[_assumed["gas"], _assumed["oil"], _assumed["coal"]]])
+    else:  # cm_yearly: WORLD ratio uniformly across fuels
+        _extra_glob_2026 = np.full((1, 3), float(flare_2026))
+    ei_glob_ratios = np.concatenate(
+        [ei_glob_ratios, _extra_glob_2025, _extra_glob_2026], axis=0)
     glob_all = _extrapolate_global(
         glob_cdiac, ei_glob_ratios, frac_inc_flare, frac_inc_cement_global,
         n_cdiac_yrs, n_extrap_yrs)
@@ -818,11 +988,39 @@ def main() -> None:
         print("Applying seasonality …")
         _apply_seasonality(ff_monthly, n_total_yrs, season, seas2)
 
-    # ── 11. Save ─────────────────────────────────────────────────────────
-    out_path = "outputs/ff_monthly_2026_py.npz"
-    np.savez(out_path, ff_monthly=ff_monthly, ff_time=ff_time)
+    # ── 11. CarbonMonitor monthly overwrite for Feb..Apr 2026 ────────────
+    print(f"Applying CarbonMonitor monthly overwrite for {LAST_CM_YEAR} "
+          f"(months {CM_OVERWRITE_MONTHS}) …")
+    cm_monthly_ratios = pd.read_csv(
+        "processed_inputs/CM_monthly_ratios_2025-2026.csv", index_col=0)
+    _apply_cm_monthly_overwrite(
+        ff_monthly,
+        country_names=country_names,
+        gissmap=gissmap,
+        codes_arr=codes_arr,
+        cm_monthly_ratios=cm_monthly_ratios,
+        yr_start=yr_start,
+        cm_year=LAST_CM_YEAR,
+        overwrite_months=CM_OVERWRITE_MONTHS,
+    )
+
+    # ── 12. Save full 34-year output (post_process trims to April 2026) ──
+    # The pipeline ran the spline / seasonality through Dec 2026 so the
+    # spline is well-conditioned at year-end; the actual netCDF only
+    # carries Jan..LAST_OUTPUT_MONTH 2026 (post_process_2026.py truncates).
+    out_path = f"outputs/ff_monthly_2026b_{method}_py.npz"
+    np.savez(out_path, ff_monthly=ff_monthly, ff_time=ff_time,
+             last_cm_year=LAST_CM_YEAR, last_output_month=LAST_OUTPUT_MONTH)
     print(f"Saved {out_path}")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
+    parser.add_argument(
+        "--method", choices=CM_METHODS, default="assumed",
+        help=("2025→2026 annual baseline. 'assumed' compounds the same "
+              "growth rates we used for 2025; 'cm_yearly' uses CM's "
+              "Q1-2026/Q1-2025 per-country ratio uniformly. The Feb..Apr "
+              "2026 monthly overwrite is the same in both cases."),
+    )
+    main(method=parser.parse_args().method)
