@@ -8,14 +8,38 @@ Combines national inventories (**CDIAC**, **Energy Institute**, **USGS cement**)
 
 ## Quick Start
 
+### v2026 — frozen 1993–2025 product
+
 ```bash
 # Full pipeline (≈ 10 min, mostly EDGAR regridding)
 python extrapolate_edgar.py          # Step 0  — extend EDGAR if needed
-python ingest_2026b.py                # Step 1  — ingest & harmonise inputs
-python ff_country_2026b.py            # Step 2  — gridding & seasonal cycle
-python post_process_2026b.py          # Step 3  — netCDF conversion (auto-calls split_ct)
-# Step 4: run verify_2026b.ipynb      # 90+ quality checks
+python ingest_2026.py                # Step 1  — ingest & harmonise inputs
+python ff_country_2026.py            # Step 2  — gridding & seasonal cycle
+python post_process_2026.py          # Step 3  — netCDF conversion (auto-calls split_ct)
+# Step 4: run verify_2026.ipynb      # 90+ quality checks
 ```
+
+### v2026b — NRT extension through April 2026 (CarbonMonitor)
+
+```bash
+# 0. Download / refresh CarbonMonitor data (idempotent; <7-day-old files are reused)
+python download_carbon_monitor.py
+
+# 1. Re-run ingest so the CM-derived ratios land in processed_inputs/
+python ingest_2026.py
+
+# 2. Run the pipeline once per annual-baseline method (≈ 3 min each)
+python ff_country_2026.py --method assumed
+python post_process_2026.py --method assumed
+python ff_country_2026.py --method cm_yearly
+python post_process_2026.py --method cm_yearly
+
+# 3. Generate the comparison artifact + run verify_2026b.ipynb
+python compare_methods_2026b.py
+jupyter nbconvert --to notebook --execute --inplace verify_2026b.ipynb
+```
+
+When CM publishes a new month (e.g., April 2026 lands in late May), re-run from step 0 with `--force` on the download to regenerate. Months CM hasn't published yet are silently skipped by the overwrite step (those cells keep the spline + seasonal-cycle output).
 
 **Requirements:** Python 3.12, conda env `p312` — numpy, scipy, pandas, xarray, pint-xarray, cf_xarray, xesmf, netCDF4, openpyxl.
 
@@ -30,6 +54,7 @@ python post_process_2026b.py          # Step 3  — netCDF conversion (auto-call
 | **EDGAR 2025 GHG** | Gridded 0.1° sector fluxes (TOTALS, NMM, PRO_FFF) | [edgar.jrc.ec.europa.eu](https://edgar.jrc.ec.europa.eu/dataset_ghg2025) |
 | **USGS Cement** | National cement production for extrapolation | [usgs.gov](https://www.usgs.gov/centers/national-minerals-information-center/cement-statistics-and-information) |
 | **GISS Country Grid** | 1° country assignment map (1993 boundaries) | [data.giss.nasa.gov](https://data.giss.nasa.gov/landuse/country.html) |
+| **CarbonMonitor** *(v2026b only)* | Daily NRT emissions, 36 countries + ROW + WORLD, 2019-01-01 onward | [carbonmonitor.org](https://carbonmonitor.org/) |
 
 ## Output Formats
 
@@ -110,6 +135,34 @@ The EI does not report individual data for all 189 CDIAC countries. Countries wi
 Flaring uses the same per-country EI ratio mechanism as the combustion fuels: countries with direct EI flaring data get their own year-over-year CO₂-from-flaring growth rates, while countries in regional aggregates share the regional rate. For the global total extrapolation (used to compute the bunker-fuel residual), flaring volumes (BCM) are read from the EI "Natural Gas Flaring" sheet and converted to year-over-year ratios.
 
 For **2025**, USGS cement data is available and per-country cement ratios are applied directly. For combustion fuels and flaring, assumed growth rates are applied uniformly across all countries: oil +2.5%, gas +2.5%, coal +1%, flaring +1%. These rates reflect consensus near-term projections and are configured in `ff_country_2026.py` (step 3a′ of `main()`).
+
+### v2026b NRT Extension — CarbonMonitor through April 2026
+
+The frozen v2026 product (1993–2025) is post-EI / pre-CarbonMonitor. For inversion runs that need a few months into 2026 before the next EI release in mid-June, a **v2026b** product extends the time series through April 2026 using [CarbonMonitor](https://carbonmonitor.org/) (CM) near-real-time daily emissions [[Liu et al., 2020](https://doi.org/10.1038/s41597-020-00708-7)]. CM publishes country-level monthly aggregates updated approximately every 2–4 weeks; the May 2026 update covers 2019-01-01 through 2026-03-31 for 36 individual countries (all 27 EU members plus US, China, India, Japan, Russia, UK, Norway, Switzerland, Brazil) plus `ROW` and `WORLD` aggregate rows. Aviation sectors are dropped (matching the legacy IDL pipeline).
+
+v2026b has two components:
+
+1. **Annual baseline for 2025 → 2026.** Two methods are produced for comparison; both are valid choices.
+   * `assumed` — same per-fuel rates we used for 2025 (gas/oil +2.5%, coal/flaring +1%, cement flat — USGS hasn't published 2026 yet) compounded one more year. Default and most consistent with the 2025 methodology.
+   * `cm_yearly` — per-country CM Q1-2026 / Q1-2025 ratio applied uniformly across all five sectors (CM doesn't break down by fuel type). Countries not directly tracked use the `ROW` row.
+
+   Both methods are written to disk as separate NetCDFs (`gml_ff_co2_2026b_assumed.nc` and `gml_ff_co2_2026b_cm_yearly.nc`); the choice is made at delivery time. Annual difference is ~0.25%; per-month differences ~0.5–1% in 2026.
+
+2. **Monthly NRT overwrite for Feb–Apr 2026.** After the PIQS spline and seasonal cycle run as usual, months for which CM has both prior-year and current-year data are overwritten **per cell**:
+
+   ```
+   Feb_2026[cell] = Feb_2025[cell] × CM_YoY_ratio[country, Feb]
+   Mar_2026[cell] = Mar_2025[cell] × CM_YoY_ratio[country, Mar]
+   Apr_2026[cell] = Apr_2025[cell] × CM_YoY_ratio[country, Apr]   (when CM publishes April)
+   ```
+
+   The ratio for each cell is looked up by the cell's assigned canonical CDIAC country — directly tracked countries get their own CM YoY ratio, the 154 fallback countries get the CM `ROW` row, and ocean / bunker cells use the `WORLD` row. Anchoring on prior-year-same-month preserves whatever seasonal pattern the pipeline already produced for the prior year (Blasing for NAM, EDGAR-derived for Eurasia, flat elsewhere) and applies only a per-country YoY scalar on top — matching the IDL semantics in `ff_country_new2023a.pro`.
+
+Months CM hasn't published yet (e.g., April 2026 in a pre-May CM release) are silently skipped — those slots keep whatever the spline + seasonal cycle produced. Re-running `download_carbon_monitor.py --force` followed by `ingest_2026.py` and the pipeline picks up the new month once it lands.
+
+The output netCDF is truncated to the partial-year boundary (April 2026), giving 400 monthly time steps. Per-year files are written for the 33 full years only; the partial 2026 is delivered through the 4 per-month CarbonTracker files (`flux1x1_ff_<method>.{2026[01..04]}.nc`).
+
+A "method comparison" report (markdown + figure) is generated by `compare_methods_2026b.py`, and `verify_2026b.ipynb` runs three v2026b-specific sanity checks (partial-year structure, per-cell YoY overwrite verification, bounded spline-propagation noise).
 
 ### Pipeline Overview
 

@@ -122,6 +122,7 @@ Gridded 1&deg; &times; 1&deg; monthly fossil-fuel CO&#8322; emission estimates (
       <li><a href="#spatial">Spatial distribution</a></li>
       <li><a href="#temporal">Temporal distribution</a></li>
       <li><a href="#extrapolation">Extrapolation beyond CDIAC</a></li>
+      <li><a href="#v2026b">v2026b NRT extension &mdash; CarbonMonitor through April 2026</a></li>
     </ul>
   </li>
   <li><a href="#pipeline">Pipeline overview</a></li>
@@ -147,6 +148,7 @@ Gridded 1&deg; &times; 1&deg; monthly fossil-fuel CO&#8322; emission estimates (
 <tr><td><strong>EDGAR v8.0 (2025 GHG)</strong></td><td>Gridded 0.1&deg; sector fluxes (TOTALS, NMM, PRO_FFF)</td><td><a href="https://edgar.jrc.ec.europa.eu/dataset_ghg2025">edgar.jrc.ec.europa.eu</a></td></tr>
 <tr><td><strong>USGS Cement</strong></td><td>National cement production for extrapolation</td><td><a href="https://www.usgs.gov/centers/national-minerals-information-center/cement-statistics-and-information">usgs.gov</a></td></tr>
 <tr><td><strong>GISS Country Grid</strong></td><td>1&deg; country assignment map (1993 boundaries)</td><td><a href="https://data.giss.nasa.gov/landuse/country.html">data.giss.nasa.gov</a></td></tr>
+<tr><td><strong>CarbonMonitor</strong> <em>(v2026b only)</em></td><td>Daily country-level NRT emissions, 36 individual countries + ROW + WORLD aggregates, 2019-01-01 onward</td><td><a href="https://carbonmonitor.org/">carbonmonitor.org</a></td></tr>
 </tbody>
 </table>
 
@@ -214,6 +216,33 @@ Gridded 1&deg; &times; 1&deg; monthly fossil-fuel CO&#8322; emission estimates (
 
 <p>For <strong>2025</strong>, USGS cement data is available and per-country cement ratios are applied directly. For combustion fuels and flaring, assumed growth rates are applied uniformly across all countries: oil +2.5%, gas +2.5%, coal +1%, flaring +1%. These rates reflect consensus near-term projections and are configured in <code>ff_country_2026.py</code>.</p>
 
+<h3 id="v2026b">v2026b NRT extension &mdash; CarbonMonitor through April 2026</h3>
+
+<p>The frozen v2026 product (1993&ndash;2025) is post-EI / pre-CarbonMonitor. For inversion runs that need a few extra months into 2026 before the next EI release (mid-June each year), a separate <strong>v2026b</strong> product extends the time series through April 2026 using <a href="https://carbonmonitor.org/">CarbonMonitor</a> (CM) near-real-time daily emissions [<a href="https://doi.org/10.1038/s41597-020-00708-7">Liu et al., 2020</a>]. CM publishes a country-level monthly aggregate from a combination of power-sector hourly load, ground-transport mobility data, industrial activity proxies, and residential heating-demand series, updated approximately every 2&ndash;4 weeks; the May 2026 update covers 2019-01-01 through 2026-03-31 for 36 individual countries (all 27 EU members, the US, China, India, Japan, Russia, UK, Norway, Switzerland, Brazil) plus &ldquo;ROW&rdquo; (rest of world) and &ldquo;WORLD&rdquo; aggregates. The aviation sectors are dropped (matching the legacy IDL pipeline).</p>
+
+<p>v2026b has two components:</p>
+
+<ol>
+  <li><strong>Annual baseline for 2025 &rarr; 2026.</strong> Two methods are produced for comparison; both are valid choices and the difference is small.
+    <ul>
+      <li><code>assumed</code> &mdash; the same per-fuel rates we used for 2025 (gas/oil +2.5%, coal/flaring +1%, cement flat &mdash; USGS hasn&rsquo;t published 2026 yet) compounded one more year. Default and most consistent with the 2025 methodology.</li>
+      <li><code>cm_yearly</code> &mdash; per-country CM Q1-2026 / Q1-2025 ratio applied uniformly across all five sectors (CM doesn&rsquo;t break down by fuel type). Countries not directly tracked by CM use the ROW row.</li>
+    </ul>
+    Both methods are written to disk as separate NetCDFs (<code>gml_ff_co2_2026b_assumed.nc</code> and <code>gml_ff_co2_2026b_cm_yearly.nc</code>) so the choice can be made at delivery time. The annual difference is approximately 0.25%; per-month differences are ~0.5&ndash;1% in 2026, smaller earlier.</li>
+
+  <li><strong>Monthly NRT overwrite for Feb&ndash;Apr 2026.</strong> After the PIQS spline and seasonal-cycle steps run as usual, the months for which CM has both prior-year and current-year data are <em>overwritten</em> per cell using:
+    <pre style="margin-top:0.6em">    Feb_2026[cell] = Feb_2025[cell] &times; CM_YoY_ratio[country, Feb]
+    Mar_2026[cell] = Mar_2025[cell] &times; CM_YoY_ratio[country, Mar]
+    Apr_2026[cell] = Apr_2025[cell] &times; CM_YoY_ratio[country, Apr]   (when CM publishes April)</pre>
+    The ratio for each cell is looked up by the cell&rsquo;s assigned canonical CDIAC country &mdash; directly tracked countries get their own CM YoY ratio, the 154 fallback countries get the CM &ldquo;ROW&rdquo; ratio, and ocean / bunker cells use the &ldquo;WORLD&rdquo; ratio. Anchoring on the same month one year prior preserves the seasonal pattern that the pipeline already produced for the prior year (Blasing in NAM, EDGAR-derived in Eurasia, flat elsewhere) and applies only a per-country YoY scalar on top, matching the IDL semantics in <code>ff_country_new2023a.pro</code>.</li>
+</ol>
+
+<p>If CM has not yet published a target month (e.g., April 2026 in the May 2026 release), that month is silently skipped &mdash; the slot retains whatever the spline + seasonal cycle produced. Re-running <code>download_carbon_monitor.py</code> followed by the pipeline picks up the new month once it lands.</p>
+
+<p>The output netCDF is truncated to the partial-year boundary (April 2026), giving 400 months total: 33 full years (1993&ndash;2025) plus 4 months (Jan&ndash;Apr 2026). Per-year files are written for the full years only; the partial last year is delivered through the per-month CarbonTracker files (<code>flux1x1_ff_&lt;method&gt;.{2026[01..04]}.nc</code>).</p>
+
+<p>A &ldquo;method comparison&rdquo; sanity-check report is generated by <code>compare_methods_2026b.py</code> (markdown summary plus a 2&times;2 figure with annual totals, per-month bars, spatial RMS time series, and the March 2026 spatial-difference map). A small companion notebook <code>verify_2026b.ipynb</code> renders that report inline plus three v2026b-specific checks: partial-year structure, per-cell verification of the YoY overwrite, and bounded spline-propagation noise pre-2026.</p>
+
 <h2 id="pipeline">Pipeline overview</h2>
 
 <pre><code>CDIAC nationals ──┐
@@ -253,6 +282,8 @@ USGS cement ──────┘   (189 countries)     1°×1° grid          v
 
 <p>Units: <code>mol m<sup>&minus;2</sup> s<sup>&minus;1</sup></code> on a global 1&deg; &times; 1&deg; grid (180 &times; 360), monthly time steps.</p>
 
+<p>The <strong>v2026b NRT extension</strong> writes its outputs alongside the v2026 frozen product with a method suffix on the filename: <code>gml_ff_co2_2026b_assumed.nc</code> and <code>gml_ff_co2_2026b_cm_yearly.nc</code> for the two annual-baseline methods (see <a href="#v2026b">v2026b NRT extension</a>). Both monolithic files carry 400 monthly time steps (1993-01 through 2026-04). Per-year files (<code>yearly/gml_ff_co2_2026b_&lt;method&gt;.{1993..2025}.nc</code>) are written only for the 33 full years; the partial 2026 is delivered through the per-month CarbonTracker files (<code>ct/flux1x1_ff_&lt;method&gt;.{YYYYMM}.nc</code>, 400 files per method). Each NetCDF carries a <code>v2026b_annual_method</code> global attribute identifying which method produced it.</p>
+
 <h2 id="verification">Verification</h2>
 
 <p>A companion Jupyter notebook (<code>verify_2026.ipynb</code>) runs 90+ automated checks organised into two parts:</p>
@@ -263,6 +294,8 @@ USGS cement ──────┘   (189 countries)     1°×1° grid          v
 
 <p>A pre-rendered HTML report (<code>verify_2026_report.html</code>) is included with the delivered outputs.</p>
 
+<p>For the v2026b NRT extension, an additional small notebook (<code>verify_2026b.ipynb</code>) runs three further checks against both method outputs: <strong>12a</strong> partial-year structure (33 full years + 4 partial months on both NetCDFs), <strong>12b</strong> per-cell verification of the CM YoY overwrite (Feb 2025 &times; CM YoY = Feb 2026 to within float64 precision on both sample cells), and <strong>12c</strong> bounded spline-propagation noise pre-2026 (rel-RMS &lt; 1% for 1993&ndash;2025; 5&times; larger divergence in 2026 as expected). The companion script <code>compare_methods_2026b.py</code> renders a markdown summary plus a 2&times;2 figure for visual review of the two annual-baseline choices.</p>
+
 <h2 id="references">References</h2>
 
 <ul>
@@ -270,6 +303,7 @@ USGS cement ──────┘   (189 countries)     1°×1° grid          v
   <li>Boden, T. A., G. Marland, and R. J. Andres (2017). Global, Regional, and National Fossil-Fuel CO&#8322; Emissions. CDIAC/ORNL. <a href="https://doi.org/10.5194/essd-13-1667-2021">https://doi.org/10.5194/essd-13-1667-2021</a></li>
   <li>Crippa, M. et al. (2024). EDGAR v8.0 Greenhouse Gas Emissions. European Commission, JRC. <a href="https://data.europa.eu/doi/10.2760/9816914">https://data.europa.eu/doi/10.2760/9816914</a></li>
   <li>Energy Institute (2025). <em>Statistical Review of World Energy, 2025 edition.</em> <a href="https://www.energyinst.org/statistical-review/about">https://www.energyinst.org/statistical-review/about</a></li>
+  <li>Liu, Z. et al. (2020). Carbon Monitor, a near-real-time daily dataset of global CO&#8322; emission from fossil fuel and cement production. <em>Scientific Data</em>, 7, 392. <a href="https://doi.org/10.1038/s41597-020-00708-7">https://doi.org/10.1038/s41597-020-00708-7</a></li>
   <li>Erb, M. and G. Marland (2026). CDIAC at AppState &mdash; Global and National Fossil-Fuel CO&#8322; Emissions. <a href="https://doi.org/10.6084/m9.figshare.31449082">https://doi.org/10.6084/m9.figshare.31449082</a></li>
   <li>Rasmussen, O. L. (1991). Piecewise integral quadratic spline interpolation. <em>Computers &amp; Geosciences</em>, 17(9), 1225&ndash;1235. <a href="https://doi.org/10.1016/0098-3004(91)90027-B">https://doi.org/10.1016/0098-3004(91)90027-B</a></li>
   <li>Thoning, K. W., P. P. Tans, and W. D. Komhyr (1989). Atmospheric carbon dioxide at Mauna Loa Observatory. <em>J. Geophys. Res.</em>, 94, 8549&ndash;8565. <a href="https://doi.org/10.1029/JD094iD06p08549">https://doi.org/10.1029/JD094iD06p08549</a></li>
