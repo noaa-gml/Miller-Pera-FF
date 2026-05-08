@@ -155,7 +155,7 @@ def main(method: CMMethod = "assumed") -> None:
     times = [datetime.combine(first_day + relativedelta(months=m), dtime.min)
              for m in range(nmonths)]
 
-    assert all(t2 > t1 for t1, t2 in zip(times, times[1:], strict=True)), "Time coordinates not monotonically increasing"
+    assert all(t2 > t1 for t1, t2 in zip(times[:-1], times[1:], strict=True)), "Time coordinates not monotonically increasing"
     assert all(t.day == 15 for t in times), "Not all time coordinates fall on the 15th"
 
     # ------------------------------------------------------------------
