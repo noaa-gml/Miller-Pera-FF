@@ -243,31 +243,36 @@ def _load_and_regrid_edgar(
     return normalized
 
 
-def _load_carbon_monitor(canonical: list[str]) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def _load_carbon_monitor(
+    canonical: list[str],
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Load CarbonMonitor near-real-time emissions for v2026b NRT extrapolation.
 
     Reads the most recent CM CSV from ``inputs/carbon_monitor/``, drops the
     aviation sectors and the EU27 aggregate row, harmonises CM country names
     to the canonical CDIAC list via ``country_aliases.json``, and produces
-    three DataFrames keyed on the 189 canonical country names:
+    four DataFrames keyed on the 189 canonical country names:
 
     * **monthly totals**  — ``MtCO2`` per country per month for the union of
       months CM covers in 2025 and ``LAST_CM_YEAR`` (e.g., 2026-01..2026-03
-      with the May-2026 download). Used by the pipeline to derive the
-      month-over-month shape inside the partial year.
-    * **monthly ratios**  — each month ÷ January of the same year, per
-      country. The pipeline anchors Feb..Apr 2026 to its own Jan 2026 value
-      using these. Countries not directly tracked by CM get filled with the
-      ``ROW`` ratios; ``WORLD`` is preserved as a separate row for the
-      bunker/global total.
+      with the May-2026 download). The raw aggregate from which the ratios
+      below are derived.
+    * **monthly intra-year ratios**  — each month ÷ January of the same
+      year, per country. *Diagnostic only* — these were used by the
+      original "option 2" overwrite scheme but produced spurious YoY drops
+      in non-seasonal regions. Kept in the processed_inputs for inspection.
+    * **monthly YoY ratios** — CM[Year, Month] / CM[Year-1, Month], per
+      country, for each month in ``LAST_CM_YEAR``. *This is what the
+      pipeline actually uses.* Anchoring on the same month a year prior
+      preserves whatever seasonal pattern is in our 2025 output and only
+      applies a per-country YoY scalar (matches the IDL semantics in
+      ``ff_country_new2023a.pro``).
     * **yearly proxy ratio**  — ``sum(CM[Q1 ``LAST_CM_YEAR``]) / sum(CM[Q1
-      ``LAST_CM_YEAR - 1``])`` per country. This is the only annual signal
-      derivable from the partial CM coverage; the pipeline can use it
-      (Method B) as the year-over-year scalar for the 2025→2026 step, or
-      ignore it entirely (Method A — assumed-growth) and rely only on the
-      within-year shape from monthly ratios.
+      ``LAST_CM_YEAR - 1``])`` per country. The annual baseline scalar for
+      Method B (``cm_yearly``); ignored by Method A (``assumed``).
 
-    Returns ``(monthly_totals, monthly_ratios, yearly_ratio)``.
+    Returns ``(monthly_totals, monthly_intra_ratios, monthly_yoy_ratios,
+    yearly_ratio)``.
     """
     files = sorted(glob(CM_CSV_GLOB))
     if not files:
@@ -352,22 +357,38 @@ def _load_carbon_monitor(canonical: list[str]) -> tuple[pd.DataFrame, pd.DataFra
     monthly_totals.loc["WORLD"] = monthly.loc["WORLD"]
     monthly_totals.columns.name = "yearmonth"
 
-    # monthly_ratios: each month's value / January of the same year, per row.
-    # For LAST_CM_YEAR-1 we anchor on Jan of LAST_CM_YEAR-1; for LAST_CM_YEAR
-    # we anchor on Jan of LAST_CM_YEAR. NaN where Jan is missing or zero.
-    monthly_ratios = monthly_totals.copy()
+    # monthly_intra_ratios: each month's value / January of the same year.
+    # Diagnostic only — see docstring; the YoY ratios below are what the
+    # pipeline actually uses for the Feb..Apr 2026 overwrite.
+    monthly_intra_ratios = monthly_totals.copy()
     for yr in {LAST_CM_YEAR - 1, LAST_CM_YEAR}:
         cols_yr = [c for c in keep_cols if c.year == yr]
         if not cols_yr:
             continue
         jan = pd.Period(year=yr, month=1, freq="M")
         if jan not in cols_yr:
-            # No Jan available for this year — leave as NaN.
             continue
         anchor = monthly_totals[jan]
         anchor_safe = anchor.where(anchor > 0)
         for c in cols_yr:
-            monthly_ratios[c] = monthly_totals[c] / anchor_safe
+            monthly_intra_ratios[c] = monthly_totals[c] / anchor_safe
+
+    # monthly_yoy_ratios: CM[year=LAST_CM_YEAR, month=M] / CM[year=LAST_CM_YEAR-1, month=M]
+    # per row, for every month in LAST_CM_YEAR. NaN where the prior-year
+    # value is missing or zero. This is the per-country YoY scalar the
+    # pipeline applies as `Feb_2026[cell] = Feb_2025[cell] × YoY_ratio`.
+    monthly_yoy_ratios = pd.DataFrame(
+        index=monthly_totals.index, dtype=float,
+    )
+    for c in keep_cols:
+        if c.year != LAST_CM_YEAR:
+            continue
+        prev = pd.Period(year=LAST_CM_YEAR - 1, month=c.month, freq="M")
+        if prev not in keep_cols:
+            monthly_yoy_ratios[str(c)] = np.nan
+            continue
+        denom = monthly_totals[prev]
+        monthly_yoy_ratios[str(c)] = monthly_totals[c] / denom.where(denom > 0)
 
     # yearly_ratio (proxy): sum(months in LAST_CM_YEAR) / sum(same months in LAST_CM_YEAR-1).
     cy = [c for c in keep_cols if c.year == LAST_CM_YEAR]
@@ -386,7 +407,7 @@ def _load_carbon_monitor(canonical: list[str]) -> tuple[pd.DataFrame, pd.DataFra
         "is_direct": [n in direct_canonical or n == "WORLD" for n in monthly_totals.index],
     })
 
-    return monthly_totals, monthly_ratios, yearly_ratio
+    return monthly_totals, monthly_intra_ratios, monthly_yoy_ratios, yearly_ratio
 
 
 # =============================================================================
@@ -818,10 +839,12 @@ def main() -> None:
     # ─────────────────────────────────────────────────────────────────────────
     print("7b. CarbonMonitor (NRT for v2026b extension) ...")
     cm_canonical = CDIAC_countries.tolist()
-    cm_monthly_totals, cm_monthly_ratios, cm_yearly_ratio = _load_carbon_monitor(cm_canonical)
-    cm_monthly_totals.to_csv("processed_inputs/CM_monthly_totals_2025-2026.csv")
-    cm_monthly_ratios.to_csv("processed_inputs/CM_monthly_ratios_2025-2026.csv")
-    cm_yearly_ratio.to_csv("processed_inputs/CM_yearly_ratio_proxy_2026.csv")
+    cm_totals, cm_intra, cm_yoy, cm_yearly = _load_carbon_monitor(cm_canonical)
+    cm_totals.to_csv("processed_inputs/CM_monthly_totals_2025-2026.csv")
+    # _intra is diagnostic only; the pipeline uses _yoy.
+    cm_intra.to_csv("processed_inputs/CM_monthly_intra_ratios_2025-2026.csv")
+    cm_yoy.to_csv("processed_inputs/CM_monthly_yoy_ratios_2026.csv")
+    cm_yearly.to_csv("processed_inputs/CM_yearly_ratio_proxy_2026.csv")
 
     # ─────────────────────────────────────────────────────────────────────────
     # 8. EDGAR emissions for spatial patterning (sector-specific)

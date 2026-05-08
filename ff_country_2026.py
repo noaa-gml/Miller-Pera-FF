@@ -759,54 +759,59 @@ def _apply_cm_monthly_overwrite(
     country_names: list[str],
     gissmap: np.ndarray,
     codes_arr: np.ndarray,
-    cm_monthly_ratios: pd.DataFrame,
+    cm_yoy_ratios: pd.DataFrame,
     yr_start: int,
     cm_year: int,
     overwrite_months: tuple[int, ...],
 ) -> None:
-    """Overwrite Feb..Apr (etc.) of *cm_year* using ``Jan_<cm_year> × CM ratio``.
+    """Overwrite Feb..Apr (etc.) of *cm_year* with prior-year-same-month × CM YoY ratio.
 
-    Implements user-selected option 2 of the v2026b NRT extension: anchor
-    the partial-year tail to whatever ``Jan_<cm_year>`` came out of the
-    pipeline (assumed-growth + PIQS spline + seasonal cycle, regardless of
-    the annual baseline method) and walk forward by chaining each month's
-    CM-monthly ratio off Jan. The Jan→Feb transition is naturally smooth
-    (it's CM's own intra-year shape), and the Dec_<cm_year-1>→Jan_<cm_year>
-    transition is smooth by construction (PIQS continuity).
+    Per-cell formula (applied to the in-place ``ff_monthly`` array):
 
-    For each country and the grid cells assigned to it (per ``gissmap`` /
-    ``codes_arr`` — same matching rule as ``_distribute_to_grid``), the
-    target month becomes ``Jan_<cm_year> × cm_monthly_ratios[country, month]``.
-    Ocean cells (gissmap == 0) use the ``WORLD`` row instead.
+        Feb_<cm_year>[cell] = Feb_<cm_year-1>[cell] × CM_yoy[country, Feb]
+
+    Anchoring on the same month a year prior (rather than on Jan of the
+    current year) preserves whatever seasonal pattern the pipeline already
+    produced for the prior year — Blasing for NAM, EDGAR-derived for
+    Eurasia, flat elsewhere — and only applies a per-country YoY scalar
+    on top. This matches the IDL semantics in ``ff_country_new2023a.pro``
+    and avoids the "imposing CM seasonality on flat regions" artefact
+    that an intra-year (Jan-anchored) overwrite produced.
+
+    For each country, the YoY ratio is looked up by canonical name —
+    countries not directly tracked by CM use the pre-filled ROW row, and
+    ocean/bunker cells (gissmap == 0) use the WORLD row.
 
     Operates **in-place** on ``ff_monthly``. Months not present in
-    ``cm_monthly_ratios`` (e.g. Apr 2026 before the next CM update) are
+    ``cm_yoy_ratios`` (e.g. Apr 2026 before the next CM update) are
     silently skipped — those slots keep whatever the spline + seasonal
     cycle produced.
     """
     yr_idx = cm_year - yr_start
-    jan_idx = yr_idx * 12  # absolute month index of Jan in ff_monthly
-    jan_layer = ff_monthly[jan_idx].copy()  # capture before any overwrites
+    base_idx = yr_idx * 12              # absolute month index of Jan_<cm_year>
+    prior_base_idx = (yr_idx - 1) * 12  # absolute month index of Jan_<cm_year-1>
 
     gissmap_coarse = gissmap // 100 * 100
     ocean_mask = gissmap == 0
 
     for month in overwrite_months:
         period_str = f"{cm_year}-{month:02d}"
-        if period_str not in cm_monthly_ratios.columns:
+        if period_str not in cm_yoy_ratios.columns:
             print(f"  {period_str}: not in CM data — skipping (re-run "
                   "download_carbon_monitor.py when the next CM update lands)")
             continue
 
-        target_idx = jan_idx + (month - 1)
-        new_layer = jan_layer.copy()
+        target_idx = base_idx + (month - 1)
+        prior_idx = prior_base_idx + (month - 1)
+        prior_layer = ff_monthly[prior_idx]                # same month a year ago
+        new_layer = prior_layer.copy()                      # default: flat YoY
 
-        # Country-by-country: each canonical name has its own ratio (which is
-        # the ROW row for fallback countries — already filled in ingest).
+        # Country-by-country: each canonical name has its own YoY ratio (ROW
+        # for fallback countries — already filled in ingest).
         for ci, name in enumerate(country_names):
-            ratio = cm_monthly_ratios.at[name, period_str]
+            ratio = cm_yoy_ratios.at[name, period_str]
             if pd.isna(ratio):
-                continue  # nothing to overwrite for this country/month
+                continue
             code = codes_arr[ci]
             match_map = (gissmap if (code // 100 in _SUBDIV_PREFIXES)
                          else gissmap_coarse)
@@ -814,17 +819,17 @@ def _apply_cm_monthly_overwrite(
             if len(cells[0]) == 0:
                 continue
             new_layer[cells[0], cells[1]] = (
-                jan_layer[cells[0], cells[1]] * ratio)
+                prior_layer[cells[0], cells[1]] * ratio)
 
-        # Ocean / bunker cells use the WORLD aggregate ratio.
-        world_ratio = cm_monthly_ratios.at["WORLD", period_str]
+        # Ocean / bunker cells use the WORLD aggregate YoY ratio.
+        world_ratio = cm_yoy_ratios.at["WORLD", period_str]
         if not pd.isna(world_ratio):
-            new_layer[ocean_mask] = jan_layer[ocean_mask] * world_ratio
+            new_layer[ocean_mask] = prior_layer[ocean_mask] * world_ratio
 
         ff_monthly[target_idx] = new_layer
         print(f"  overwrote {period_str} (idx {target_idx}) "
-              f"with Jan {cm_year} × CM ratios "
-              f"(WORLD ratio {world_ratio:.4f})")
+              f"with {cm_year - 1}-{month:02d} × CM YoY ratios "
+              f"(WORLD YoY {world_ratio:.4f})")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -991,14 +996,14 @@ def main(method: CMMethod = "assumed") -> None:
     # ── 11. CarbonMonitor monthly overwrite for Feb..Apr 2026 ────────────
     print(f"Applying CarbonMonitor monthly overwrite for {LAST_CM_YEAR} "
           f"(months {CM_OVERWRITE_MONTHS}) …")
-    cm_monthly_ratios = pd.read_csv(
-        "processed_inputs/CM_monthly_ratios_2025-2026.csv", index_col=0)
+    cm_yoy_ratios = pd.read_csv(
+        "processed_inputs/CM_monthly_yoy_ratios_2026.csv", index_col=0)
     _apply_cm_monthly_overwrite(
         ff_monthly,
         country_names=country_names,
         gissmap=gissmap,
         codes_arr=codes_arr,
-        cm_monthly_ratios=cm_monthly_ratios,
+        cm_yoy_ratios=cm_yoy_ratios,
         yr_start=yr_start,
         cm_year=LAST_CM_YEAR,
         overwrite_months=CM_OVERWRITE_MONTHS,
