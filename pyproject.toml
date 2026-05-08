@@ -13,6 +13,11 @@ target-version = "py312"
 #     ruff check --fix verify_2026.ipynb
 extend-exclude = ["archive", "__pycache__", ".venv", "send_to_ken", "*.ipynb"]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-q --tb=short"
+
 [tool.ruff.lint]
 select = ["ALL"]
 
@@ -95,6 +100,17 @@ ignore = [
     "A004",     # `display` (from IPython.display) shadows a builtin — common idiom
     "PT018",    # multi-clause asserts — fine in notebook checks
 ]
+"tests/*.py" = [
+    "S101",     # assert is the whole point of pytest
+    "ANN",      # test functions don't need annotations
+    "PLR2004",  # magic values are normal in test fixtures
+    "D",        # docstring rules — keep tests terse
+    "INP001",   # tests/ doesn't need __init__ (we have one anyway)
+    "PT004",    # fixture not returning a value
+    "PLC0415",  # late imports are fine in skip-if-missing patterns
+    "N806",     # uppercase locals (H, W, SUBDIV_PREFIXES) used as constants
+    "PT018",    # multi-clause asserts — fine in numpy boolean checks
+]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -134,3 +150,14 @@ no_implicit_reexport = true
 strict_equality = true
 extra_checks = true
 warn_return_any = false
+
+# Tests don't need full strictness — pytest fixtures, parametrize, and
+# duck-typed conftest plumbing don't benefit from chasing every missing
+# annotation.
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+check_untyped_defs = true
+ignore_missing_imports = true

@@ -805,6 +805,7 @@ def _apply_cm_monthly_overwrite(
         prior_idx = prior_base_idx + (month - 1)
         prior_layer = ff_monthly[prior_idx]                # same month a year ago
         new_layer = prior_layer.copy()                      # default: flat YoY
+        any_applied = False
 
         # Country-by-country: each canonical name has its own YoY ratio (ROW
         # for fallback countries — already filled in ingest).
@@ -820,11 +821,21 @@ def _apply_cm_monthly_overwrite(
                 continue
             new_layer[cells[0], cells[1]] = (
                 prior_layer[cells[0], cells[1]] * ratio)
+            any_applied = True
 
         # Ocean / bunker cells use the WORLD aggregate YoY ratio.
         world_ratio = cm_yoy_ratios.at["WORLD", period_str]
         if not pd.isna(world_ratio):
             new_layer[ocean_mask] = prior_layer[ocean_mask] * world_ratio
+            any_applied = True
+
+        # If every ratio was NaN (column present but data all missing — e.g.
+        # zero base-year totals), leave the target month untouched rather
+        # than silently writing a prior-year copy over a current spline value.
+        if not any_applied:
+            print(f"  {period_str}: column present but all ratios NaN — "
+                  "leaving target month untouched")
+            continue
 
         ff_monthly[target_idx] = new_layer
         print(f"  overwrote {period_str} (idx {target_idx}) "
