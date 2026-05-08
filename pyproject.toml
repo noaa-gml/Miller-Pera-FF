@@ -92,6 +92,8 @@ ignore = [
     "B905",     # zip without strict
     "PLW2901",  # for-loop variable overwritten
     "DTZ001",   # datetime without tzinfo
+    "A004",     # `display` (from IPython.display) shadows a builtin — common idiom
+    "PT018",    # multi-clause asserts — fine in notebook checks
 ]
 
 
