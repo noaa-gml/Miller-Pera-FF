@@ -19,13 +19,14 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from config import OUTPUT_PREFIX, PRODUCT_VERSION
 from constants import C_MOLAR_MASS
 
 OUT_DIR = Path("outputs")
-ASSUMED_PATH = OUT_DIR / "gml_ff_co2_2026b_assumed.nc"
-CM_PATH      = OUT_DIR / "gml_ff_co2_2026b_cm_yearly.nc"
-SUMMARY_MD   = OUT_DIR / "v2026b_method_comparison.md"
-FIGURE_PNG   = OUT_DIR / "v2026b_method_comparison.png"
+ASSUMED_PATH = OUT_DIR / f"{OUTPUT_PREFIX}_assumed.nc"
+CM_PATH      = OUT_DIR / f"{OUTPUT_PREFIX}_cm_yearly.nc"
+SUMMARY_MD   = OUT_DIR / f"v{PRODUCT_VERSION}_method_comparison.md"
+FIGURE_PNG   = OUT_DIR / f"v{PRODUCT_VERSION}_method_comparison.png"
 
 
 def per_month_pgc(ds: xr.Dataset) -> np.ndarray:

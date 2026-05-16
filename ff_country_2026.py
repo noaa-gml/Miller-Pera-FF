@@ -42,22 +42,21 @@ from __future__ import annotations
 import argparse
 import calendar
 from pathlib import Path
-from typing import Literal
 
 import numpy as np
 import pandas as pd
 
-# v2026b NRT extension config — the two methods we try for the 2025→2026
-# annual baseline. See README / commit log for the trade-off; the pipeline
-# is run once per method and the post-processing tags the output filename.
-CM_METHODS = ("assumed", "cm_yearly")
-CMMethod = Literal["assumed", "cm_yearly"]
-# Months in `LAST_CM_YEAR` that get overwritten with `Jan_<yr> × CM_ratio`.
-# Anything not present in the CM CSV is silently skipped (e.g. April 2026
-# until the next CM update lands).
-CM_OVERWRITE_MONTHS = (2, 3, 4)
-LAST_CM_YEAR = 2026
-LAST_OUTPUT_MONTH = 4   # only output months 1..LAST_OUTPUT_MONTH of LAST_CM_YEAR
+from config import (
+    CM_METHODS,
+    CM_OVERWRITE_MONTHS,
+    LAST_CDIAC_YEAR,
+    LAST_CM_YEAR,
+    LAST_EI_YEAR,
+    LAST_OUTPUT_MONTH,
+    PRODUCT_VERSION,
+    STARTING_YEAR,
+    CMMethod,
+)
 
 # ---------------------------------------------------------------------------
 # Sector-column ordering (shared by CDIAC CSVs and all internal arrays
@@ -869,12 +868,14 @@ def main(method: CMMethod = "assumed") -> None:
         raise ValueError(f"Unknown method {method!r}; expected one of {CM_METHODS}")
 
     # ── Configuration ────────────────────────────────────────────────────
+    # Year span comes from config.py; the local short names are kept because
+    # they thread through many helper-function signatures below.
     season   = "nam"
     seas2    = "euras"
-    yr_start = 1993
-    yr_cdiac = 2022
-    yr_ei    = 2024
-    yr_final = 2026                              # was 2025; now Q1 2026 NRT
+    yr_start = STARTING_YEAR
+    yr_cdiac = LAST_CDIAC_YEAR
+    yr_ei    = LAST_EI_YEAR
+    yr_final = LAST_CM_YEAR
 
     n_ei_yrs     = yr_ei - yr_cdiac            # 2
     n_cdiac_yrs  = yr_cdiac - yr_start + 1     # 30
@@ -882,7 +883,7 @@ def main(method: CMMethod = "assumed") -> None:
     n_total_yrs  = n_cdiac_yrs + n_extrap_yrs  # 34
     fuels        = ["gas", "oil", "coal", "flaring"]
 
-    print(f"=== ff_country_2026 (v2026b)  method={method}  yr_final={yr_final} ===")
+    print(f"=== ff_country (v{PRODUCT_VERSION})  method={method}  yr_final={yr_final} ===")
 
     # EI flaring volumes (BCM) — global ratios still needed for _extrapolate_global
     _flaring_bcm = pd.read_csv("processed_inputs/EI_flaring_bcm.csv", index_col="Year")
@@ -1024,7 +1025,7 @@ def main(method: CMMethod = "assumed") -> None:
     # The pipeline ran the spline / seasonality through Dec 2026 so the
     # spline is well-conditioned at year-end; the actual netCDF only
     # carries Jan..LAST_OUTPUT_MONTH 2026 (post_process_2026.py truncates).
-    out_path = f"outputs/ff_monthly_2026b_{method}_py.npz"
+    out_path = f"outputs/ff_monthly_{PRODUCT_VERSION}_{method}_py.npz"
     np.savez(out_path, ff_monthly=ff_monthly, ff_time=ff_time,
              last_cm_year=LAST_CM_YEAR, last_output_month=LAST_OUTPUT_MONTH)
     print(f"Saved {out_path}")

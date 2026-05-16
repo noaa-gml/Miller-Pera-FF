@@ -52,6 +52,7 @@ CODE_FILES = [
     "split_ct_2026.py",
     "country_names.py",
     "constants.py",
+    "config.py",
     "compare_methods_2026b.py",
     "pyproject.toml",
     "verify_2026.ipynb",

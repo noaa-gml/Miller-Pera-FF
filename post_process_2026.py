@@ -34,7 +34,6 @@ import subprocess
 import sys
 from datetime import UTC, date, datetime
 from datetime import time as dtime
-from typing import Literal
 
 import cf_xarray.units
 import netCDF4
@@ -47,25 +46,27 @@ import xcdat  # noqa: F401  # monkey-patches .bounds.add_time_bounds onto xarray
 import xesmf as xe
 from dateutil.relativedelta import relativedelta  # type: ignore[import-untyped]
 
+from config import (
+    CM_METHODS,
+    LAST_CM_YEAR,
+    OUTPUT_PREFIX,
+    PRODUCT_VERSION,
+    SOURCE_STRING,
+    STARTING_YEAR,
+    CMMethod,
+)
 from constants import C_MOLAR_MASS, EARTH_RADIUS
 
 xr.set_options(keep_attrs=True)  # type: ignore[no-untyped-call]
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Configuration — edit these for each new year
+# Configuration — year span / paths / provenance come from config.py
 # ═══════════════════════════════════════════════════════════════════════════════
 YEARLY_DIR    = "outputs/yearly"
 VAR_NAME      = "fossil_imp"           # main variable (matches Fortran rc)
-YR1           = 1993                   # first year in data
-YR3           = 2026                   # last year in data (partial — through April only)
-# EARTH_RADIUS, C_MOLAR_MASS are physical constants — imported from constants.py.
-SOURCE_STRING = ("Miller-Pera FF 2026b, 1993 country bounds. "
-                 "CDIAC-AppState 2022; EI 2025; EDGAR 2025 GHG; "
-                 "USGS MCS Cement 2026; CarbonMonitor NRT through "
-                 "April 2026 (per Andy Jacobson's request).")
-CM_METHODS = ("assumed", "cm_yearly")
-CMMethod = Literal["assumed", "cm_yearly"]
+YR1           = STARTING_YEAR          # first year in data
+YR3           = LAST_CM_YEAR           # last year in data (partial — through April only)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -98,9 +99,9 @@ def cell_areas_m2(earth_radius_km: float = EARTH_RADIUS) -> np.ndarray:
 def main(method: CMMethod = "assumed") -> None:
     if method not in CM_METHODS:
         raise ValueError(f"Unknown method {method!r}; expected one of {CM_METHODS}")
-    npz_file = f"outputs/ff_monthly_2026b_{method}_py.npz"
-    monolithic = f"outputs/gml_ff_co2_2026b_{method}.nc"
-    file_prefix = f"gml_ff_co2_2026b_{method}"
+    npz_file = f"outputs/ff_monthly_{PRODUCT_VERSION}_{method}_py.npz"
+    monolithic = f"outputs/{OUTPUT_PREFIX}_{method}.nc"
+    file_prefix = f"{OUTPUT_PREFIX}_{method}"
 
     nyears_full = YR3 - YR1                       # 33 (1993..2025 inclusive)
     nyears_in_npz = nyears_full + 1               # 34 (npz carries Dec 2026 too)

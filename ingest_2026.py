@@ -35,6 +35,20 @@ import xcdat  # noqa: F401
 import xesmf as xe
 from xarray import open_mfdataset
 
+from config import (
+    CDIAC_GLOBAL_XLSX,
+    CDIAC_NATIONAL_XLSX,
+    CM_CSV_GLOB,
+    EDGAR_NMM_DIR,
+    EDGAR_PRO_FFF_DIR,
+    EDGAR_TOTALS_DIR,
+    EI_XLSX,
+    LAST_CDIAC_YEAR,
+    LAST_CM_YEAR,
+    LAST_EI_YEAR,
+    STARTING_YEAR,
+    USGS_CEMENT_GLOB,
+)
 from constants import EARTH_RADIUS
 from country_names import load_aliases, load_canonical, validate_names
 
@@ -43,23 +57,15 @@ xr.set_options(keep_attrs=True)  # type: ignore[no-untyped-call]
 
 
 # =============================================================================
-# Configuration
+# Configuration — year span + input paths come from config.py
 # =============================================================================
 
-STARTING_YEAR    = 1993
-LAST_CDIAC_YEAR  = 2022
-LAST_EI_YEAR     = 2024
-LAST_CM_YEAR     = 2026  # CarbonMonitor partial-year coverage for v2026b NRT extension
-# EARTH_RADIUS is a physical constant — imported from constants.py (see top).
+# EDGAR globs derived from the sector directories in config.py.
+EDGAR_NCS        = f"{EDGAR_TOTALS_DIR}/*.nc"
+EDGAR_NMM_NCS    = f"{EDGAR_NMM_DIR}/*.nc"
+EDGAR_PRO_NCS    = f"{EDGAR_PRO_FFF_DIR}/*.nc"
+USGS_CEMENT_CSVS = USGS_CEMENT_GLOB
 
-CDIAC_GLOBAL_XLSX   = "inputs/CDIAC/global.1750_2022.xlsx"
-CDIAC_NATIONAL_XLSX = "inputs/CDIAC/nation.1750_2022.xlsx"
-EI_XLSX             = "inputs/EI-Stats-Review-ALL-data-2025.xlsx"
-EDGAR_NCS           = "inputs/TOTALS_flx_nc_2025_GHG/*.nc"
-EDGAR_NMM_NCS       = "inputs/NMM_flx_nc_2025_GHG/*.nc"
-EDGAR_PRO_NCS       = "inputs/PRO_FFF_flx_nc_2025_GHG/*.nc"
-USGS_CEMENT_CSVS    = "./inputs/USGS_cement/mcs????-cement.csv"
-CM_CSV_GLOB         = "inputs/carbon_monitor/carbonmonitor-global_datas_*.csv"
 # CarbonMonitor sectors to drop before aggregating (the IDL pipeline excludes
 # both aviation channels — they're a small fraction of total and aren't well
 # matched to country-of-emission, which is what we want here).

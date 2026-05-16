@@ -48,6 +48,8 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
+from config import LAST_CM_YEAR, LAST_OUTPUT_MONTH
+
 if TYPE_CHECKING:
     from http.client import HTTPResponse
 
@@ -64,11 +66,11 @@ EXPECTED_SECTORS = {
     "Domestic Aviation", "Ground Transport", "Industry",
     "International Aviation", "Power", "Residential",
 }
-# Pipeline coverage requirement for the v2026 NRT extrapolation:
-# 2025 must be complete (full year), 2026 must reach at least Q1.
-REQUIRED_FULL_YEAR = 2025
-REQUIRED_MIN_2026_MONTH = 3   # CM data through end-of-March 2026
-TARGET_MIN_2026_MONTH = 4     # ideal: through end-of-April 2026 (per Andy's ask)
+# Pipeline coverage requirement for the NRT extrapolation: the year before
+# LAST_CM_YEAR must be complete, and LAST_CM_YEAR must reach at least Q1.
+PREV_FULL_YEAR    = LAST_CM_YEAR - 1
+REQUIRED_CM_MONTH = 3                  # CM data must reach at least end-of-March
+TARGET_CM_MONTH   = LAST_OUTPUT_MONTH  # ideal: through the last output month
 # Skip download if we already have a CSV from within this many days.
 FRESH_THRESHOLD_DAYS = 7
 
@@ -170,24 +172,25 @@ def _validate(csv_path: Path) -> dict[str, Any]:
     have_aggregates = aggregates & set(countries)
     missing_aggregates = aggregates - set(countries)
 
-    # Coverage: 2025 full year + at least Q1 2026.
+    # Coverage: PREV_FULL_YEAR complete + LAST_CM_YEAR at least Q1.
     end = df["date"].max()
     start = df["date"].min()
-    end_2025 = df.loc[df["date"].dt.year == REQUIRED_FULL_YEAR, "date"].max()
-    end_2026 = df.loc[df["date"].dt.year == 2026, "date"].max() if (df["date"].dt.year == 2026).any() else None
+    is_cm_year = df["date"].dt.year == LAST_CM_YEAR
+    end_prev = df.loc[df["date"].dt.year == PREV_FULL_YEAR, "date"].max()
+    end_cm = df.loc[is_cm_year, "date"].max() if is_cm_year.any() else None
 
     issues: list[str] = []
-    if pd.isna(end_2025) or end_2025.month != 12 or end_2025.day < 31:
+    if pd.isna(end_prev) or end_prev.month != 12 or end_prev.day < 31:
         issues.append(
-            f"{REQUIRED_FULL_YEAR} is not complete: latest = "
-            f"{end_2025.date() if pd.notna(end_2025) else 'none'}",
+            f"{PREV_FULL_YEAR} is not complete: latest = "
+            f"{end_prev.date() if pd.notna(end_prev) else 'none'}",
         )
-    if end_2026 is None:
-        issues.append("no 2026 data at all")
-    elif end_2026.month < REQUIRED_MIN_2026_MONTH:
+    if end_cm is None:
+        issues.append(f"no {LAST_CM_YEAR} data at all")
+    elif end_cm.month < REQUIRED_CM_MONTH:
         issues.append(
-            f"2026 only goes through month {end_2026.month} "
-            f"(need at least month {REQUIRED_MIN_2026_MONTH})",
+            f"{LAST_CM_YEAR} only goes through month {end_cm.month} "
+            f"(need at least month {REQUIRED_CM_MONTH})",
         )
 
     if missing_aggregates:
@@ -211,12 +214,14 @@ def _validate(csv_path: Path) -> dict[str, Any]:
     print(f"                 {', '.join(individuals)}")
     print(f"  aggregates   : {', '.join(sorted(have_aggregates))}")
     print(f"  sectors      : {', '.join(sorted(sectors))}")
-    if end_2026 is not None and end_2026.month >= TARGET_MIN_2026_MONTH:
-        print(f"  ✓ covers through {end_2026.date()} (meets Andy's April 2026 target)")
-    elif end_2026 is not None:
+    if end_cm is not None and end_cm.month >= TARGET_CM_MONTH:
+        print(f"  ✓ covers through {end_cm.date()} "
+              f"(meets the month-{TARGET_CM_MONTH} {LAST_CM_YEAR} target)")
+    elif end_cm is not None:
         print(
-            f"  ⚠ covers through {end_2026.date()} only — "
-            f"April 2026 not yet available; re-run after the next CM update",
+            f"  ⚠ covers through {end_cm.date()} only — "
+            f"month {TARGET_CM_MONTH} {LAST_CM_YEAR} not yet available; "
+            "re-run after the next CM update",
         )
 
     if issues:

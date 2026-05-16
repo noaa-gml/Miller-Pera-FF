@@ -22,20 +22,27 @@ from glob import glob
 import numpy as np
 import xarray as xr
 
+from config import (
+    EDGAR_EXTRAP_TO_YEAR,
+    EDGAR_NMM_DIR,
+    EDGAR_PRO_FFF_DIR,
+    EDGAR_TOTALS_DIR,
+)
+
 # ═══════════════════════════════════════════════════════════════════════════════
-# Configuration
+# Configuration — EDGAR sector dirs + target year come from config.py
 # ═══════════════════════════════════════════════════════════════════════════════
 
-LAST_PIPELINE_YEAR = 2025   # last year needed by ingest_2026.py
+LAST_PIPELINE_YEAR = EDGAR_EXTRAP_TO_YEAR   # last year to write FAKE EDGAR files
 N_YEARS_FOR_RATE   = 3      # how many recent real years to use for rate estimate
 FALLBACK_RATE      = 0.01   # fallback if too few real years exist (~recent trend)
 
 # All three sector directories the pipeline needs, with their sector tag and
 # the NetCDF variable name used inside each file.
 SECTORS = [
-    {"dir": "inputs/TOTALS_flx_nc_2025_GHG",   "tag": "TOTALS",  "var": "fluxes"},
-    {"dir": "inputs/NMM_flx_nc_2025_GHG",      "tag": "NMM",     "var": "fluxes"},
-    {"dir": "inputs/PRO_FFF_flx_nc_2025_GHG",  "tag": "PRO_FFF", "var": "fluxes"},
+    {"dir": EDGAR_TOTALS_DIR,  "tag": "TOTALS",  "var": "fluxes"},
+    {"dir": EDGAR_NMM_DIR,     "tag": "NMM",     "var": "fluxes"},
+    {"dir": EDGAR_PRO_FFF_DIR, "tag": "PRO_FFF", "var": "fluxes"},
 ]
 
 

@@ -21,22 +21,19 @@ import argparse
 import os
 import sys
 from datetime import UTC, datetime
-from typing import Any, Literal
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
+from config import CM_METHODS, OUTPUT_PREFIX, SOURCE_STRING, CMMethod
+
 # ═══════════════════════════════════════════════════════════════════════════════
-# Configuration
+# Configuration — provenance / methods come from config.py
 # ═══════════════════════════════════════════════════════════════════════════════
 CT_DIR        = "outputs/ct"
 VAR_NAME      = "fossil_imp"
-SOURCE_STRING = ("Miller-Pera FF 2026b, 1993 country bounds. "
-                 "CDIAC-AppState 2022; EI 2025; EDGAR 2025 GHG; "
-                 "USGS MCS Cement 2026; CarbonMonitor NRT through April 2026.")
-CM_METHODS = ("assumed", "cm_yearly")
-CMMethod = Literal["assumed", "cm_yearly"]
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -150,12 +147,12 @@ def build_carbontracker_dataset(ds_in: xr.Dataset) -> xr.Dataset:
 def main(method: CMMethod = "assumed") -> None:
     if method not in CM_METHODS:
         raise ValueError(f"Unknown method {method!r}; expected one of {CM_METHODS}")
-    monolithic = f"outputs/gml_ff_co2_2026b_{method}.nc"
+    monolithic = f"outputs/{OUTPUT_PREFIX}_{method}.nc"
     ct_prefix = f"flux1x1_ff_{method}"
 
     if not os.path.exists(monolithic):
         print(f"ERROR: {monolithic} not found. Run "
-              f"post_process_2026.py --method {method} first.", file=sys.stderr)
+              f"post_process --method {method} first.", file=sys.stderr)
         sys.exit(1)
 
     print(f"Loading {monolithic} ...")
