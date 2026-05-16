@@ -35,6 +35,7 @@ import xcdat  # noqa: F401
 import xesmf as xe
 from xarray import open_mfdataset
 
+from constants import EARTH_RADIUS
 from country_names import load_aliases, load_canonical, validate_names
 
 pd.set_option("future.no_silent_downcasting", True)
@@ -49,7 +50,7 @@ STARTING_YEAR    = 1993
 LAST_CDIAC_YEAR  = 2022
 LAST_EI_YEAR     = 2024
 LAST_CM_YEAR     = 2026  # CarbonMonitor partial-year coverage for v2026b NRT extension
-EARTH_RADIUS     = 6371.009  # km, John Miller's value
+# EARTH_RADIUS is a physical constant — imported from constants.py (see top).
 
 CDIAC_GLOBAL_XLSX   = "inputs/CDIAC/global.1750_2022.xlsx"
 CDIAC_NATIONAL_XLSX = "inputs/CDIAC/nation.1750_2022.xlsx"

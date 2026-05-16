@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-C_MOLAR_MASS = 12.011
+from constants import C_MOLAR_MASS
 
 OUT_DIR = Path("outputs")
 ASSUMED_PATH = OUT_DIR / "gml_ff_co2_2026b_assumed.nc"

@@ -30,7 +30,8 @@ dependencies:
   - ipython>=8.30
   - nbconvert>=7.16
   - jupyter
-  # ── dev tooling (lint / type-check / test) ───────────────────────────────
+  # ── dev tooling (lint / type-check / test / git hooks) ───────────────────
   - ruff>=0.15
   - mypy>=1.11
   - pytest>=9.0
+  - pre-commit>=4.0

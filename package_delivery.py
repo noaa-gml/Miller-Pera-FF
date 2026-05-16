@@ -37,7 +37,10 @@ REPO = Path(__file__).parent
 METHODS = ("assumed", "cm_yearly")
 
 # Copied verbatim into <outdir>/
-DOC_FILES = ["README.md", "methodology.html", "landing_page.html", "summary_figure.png"]
+DOC_FILES = [
+    "README.md", "methodology.html", "landing_page.html",
+    "summary_figure.png", "CHANGELOG.md",
+]
 
 # Copied into <outdir>/code/
 CODE_FILES = [
@@ -48,6 +51,7 @@ CODE_FILES = [
     "post_process_2026.py",
     "split_ct_2026.py",
     "country_names.py",
+    "constants.py",
     "compare_methods_2026b.py",
     "pyproject.toml",
     "verify_2026.ipynb",

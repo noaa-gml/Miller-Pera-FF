@@ -1,0 +1,49 @@
+# Pre-commit hooks for the Miller-Pera FF pipeline.
+#
+# One-time setup (the `p312` conda env already provides `pre-commit`):
+#     pre-commit install
+#
+# After that, the hooks below run automatically on every `git commit`,
+# catching lint / type / hygiene problems before they land — the same
+# gates the CI workflow enforces, but on your machine first.
+#
+# Run on all files manually:  pre-commit run --all-files
+# Update hook versions:       pre-commit autoupdate
+
+repos:
+  # ── general hygiene ─────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml          # ci.yml, environment.yml, this file
+      - id: check-toml          # pyproject.toml
+      - id: check-json          # inputs/country_aliases.json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        # Blocks accidental commits of the ~400 MB output netCDFs while
+        # still allowing summary_figure.png (~640 KB).
+        args: ["--maxkb=1024"]
+
+  # ── ruff: lint (matches the version pinned in environment.yml) ──────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.12
+    hooks:
+      - id: ruff
+        args: ["check"]
+
+  # ── mypy: type-check via the project environment ────────────────────────
+  # Run as a `local` (system) hook rather than the mirrored mypy hook: mypy
+  # needs the project's installed packages (numpy, pandas, xarray, …) to
+  # resolve types, so it must use the active `p312` env, not an isolated
+  # pre-commit virtualenv. Commit from within the conda env.
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (whole project)
+        entry: mypy
+        language: system
+        types: [python]
+        pass_filenames: false
+        args: ["."]

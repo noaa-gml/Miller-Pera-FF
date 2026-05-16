@@ -47,6 +47,8 @@ import xcdat  # noqa: F401  # monkey-patches .bounds.add_time_bounds onto xarray
 import xesmf as xe
 from dateutil.relativedelta import relativedelta  # type: ignore[import-untyped]
 
+from constants import C_MOLAR_MASS, EARTH_RADIUS
+
 xr.set_options(keep_attrs=True)  # type: ignore[no-untyped-call]
 
 
@@ -57,8 +59,7 @@ YEARLY_DIR    = "outputs/yearly"
 VAR_NAME      = "fossil_imp"           # main variable (matches Fortran rc)
 YR1           = 1993                   # first year in data
 YR3           = 2026                   # last year in data (partial — through April only)
-EARTH_RADIUS  = 6371.009              # km  (John Miller's value)
-C_MOLAR_MASS  = 12.011                # g/mol
+# EARTH_RADIUS, C_MOLAR_MASS are physical constants — imported from constants.py.
 SOURCE_STRING = ("Miller-Pera FF 2026b, 1993 country bounds. "
                  "CDIAC-AppState 2022; EI 2025; EDGAR 2025 GHG; "
                  "USGS MCS Cement 2026; CarbonMonitor NRT through "
