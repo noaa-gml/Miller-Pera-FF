@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: >-
-  If you use this software or the data product it generates, please cite
-  both the software (this entry) and the dataset (under preferred-citation).
+  To cite the data product, use the dataset entry under preferred-citation
+  (DOI 10.15138/J2Y9-VC32). To cite the pipeline software, use this entry.
 title: "Miller-Pera FF: a pipeline for gridded fossil-fuel CO2 emission estimates"
 abstract: >-
   Pipeline that builds NOAA GML's gridded 1 deg x 1 deg monthly fossil-fuel
@@ -17,13 +17,16 @@ url: "https://github.com/noaa-gml/miller-ff"
 authors:
   - family-names: Pera
     given-names: Ashley
-    affiliation: "Cooperative Institute for Research in Environmental Sciences, University of Colorado Boulder"
+    affiliation: "NOAA Global Monitoring Laboratory / University of Colorado Boulder"
+    orcid: "https://orcid.org/0009-0002-9019-279X"
   - family-names: Jacobson
-    given-names: Andrew R.
-    affiliation: "Cooperative Institute for Research in Environmental Sciences, University of Colorado Boulder"
+    given-names: Andrew
+    affiliation: "NOAA Global Monitoring Laboratory / University of Colorado Boulder"
+    orcid: "https://orcid.org/0000-0002-8501-3382"
   - family-names: Miller
-    given-names: John B.
+    given-names: John
     affiliation: "NOAA Global Monitoring Laboratory"
+    orcid: "https://orcid.org/0000-0001-8630-1610"
 keywords:
   - fossil fuel CO2 emissions
   - carbon cycle
@@ -34,25 +37,30 @@ keywords:
 preferred-citation:
   type: dataset
   title: >-
-    Gridded 1 deg x 1 deg monthly fossil-fuel CO2 emission estimates
-    (1993-2026) for use as prior fluxes in atmospheric inversion systems
-  version: "2026b"
+    Gridded 1 x 1 monthly fossil-fuel CO2 emission estimates (1993-2025)
+    for use fluxes in atmospheric inversion systems
+  version: "2026"
   year: 2026
-  month: 5
-  url: "https://github.com/noaa-gml/miller-ff"
-  institution:
+  month: 3
+  doi: "10.15138/J2Y9-VC32"
+  url: "https://gml.noaa.gov/ccgg/arc/?id=193"
+  publisher:
     name: "NOAA Global Monitoring Laboratory"
   authors:
     - family-names: Pera
       given-names: Ashley
-      affiliation: "Cooperative Institute for Research in Environmental Sciences, University of Colorado Boulder"
+      affiliation: "NOAA Global Monitoring Laboratory / University of Colorado Boulder"
+      orcid: "https://orcid.org/0009-0002-9019-279X"
     - family-names: Jacobson
-      given-names: Andrew R.
-      affiliation: "Cooperative Institute for Research in Environmental Sciences, University of Colorado Boulder"
+      given-names: Andrew
+      affiliation: "NOAA Global Monitoring Laboratory / University of Colorado Boulder"
+      orcid: "https://orcid.org/0000-0002-8501-3382"
     - family-names: Miller
-      given-names: John B.
+      given-names: John
       affiliation: "NOAA Global Monitoring Laboratory"
+      orcid: "https://orcid.org/0000-0001-8630-1610"
   notes: >-
-    Version 2026b extends the frozen 1993-2025 product through April 2026
-    using CarbonMonitor near-real-time emissions. Two annual-baseline
-    methods (assumed, cm_yearly) are distributed; see CHANGELOG.md.
+    Archived dataset of record (NOAA GML data archive id 193). The
+    repository's current release (v2.0.0) also produces v2026b, a
+    near-real-time extension through April 2026 that is not separately
+    archived; see CHANGELOG.md.
