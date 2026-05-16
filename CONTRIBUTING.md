@@ -36,6 +36,11 @@ enough for the three gates below and every pipeline stage *except* the regrid
 python -m pip install -r requirements.txt   # no regridding
 ```
 
+For a bit-identical environment, install from `conda-lock.yml` — the fully
+resolved, multi-platform lockfile (every transitive package pinned to an
+exact build): `conda-lock install -n p312 conda-lock.yml`. Regenerate it
+with `make lock` after editing `environment.yml`.
+
 There is no R (or other-language) code. The only non-Python files are legacy
 IDL `.pro` scripts under `archive/`, kept for historical reference; they are
 not part of the build.
@@ -106,7 +111,7 @@ things and **must be updated together**:
 
 | If you… | also update… |
 |---|---|
-| add or bump a dependency | `environment.yml` **and** `requirements.txt` — both are exact-pinned, in two formats (conda `=`, pip `==`) |
+| add or bump a dependency | `environment.yml` **and** `requirements.txt` (exact-pinned, two formats: conda `=`, pip `==`), then regenerate `conda-lock.yml` with `make lock` |
 | bump `ruff` | the `rev:` of the ruff hook in `.pre-commit-config.yaml` — it is pinned *separately*; if it drifts from the `ruff` version pin, your local lint differs from CI's |
 | add a numerically-relevant package | `_TRACKED_PACKAGES` in `provenance.py`, so its version is recorded inside every output file |
 | add a new pipeline module | `CODE_FILES` in `package_delivery.py`, or the file never reaches the delivery bundle |

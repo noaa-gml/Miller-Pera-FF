@@ -23,9 +23,11 @@ help:  ## List available targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "} {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
 # ── environment ──────────────────────────────────────────────────────────
-.PHONY: env
+.PHONY: env lock
 env:  ## Create the conda env from environment.yml (first-time setup)
 	conda env create -f environment.yml
+lock:  ## Regenerate conda-lock.yml from environment.yml (needs conda-lock)
+	conda-lock lock -f environment.yml -p osx-arm64 -p linux-64
 
 # ── quality gates (mirror .github/workflows/ci.yml) ──────────────────────
 .PHONY: lint typecheck test check

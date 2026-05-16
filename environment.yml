@@ -15,11 +15,13 @@
 # inside the file itself (see provenance.py).
 #
 # To move to newer releases: bump the pins here, re-run the verification
-# notebooks (verify.ipynb / verify_nrt.ipynb), and update requirements.txt
-# in the same commit so the two stay in step.
+# notebooks (verify.ipynb / verify_nrt.ipynb), update requirements.txt, and
+# regenerate conda-lock.yml (`make lock`) — all in the same commit.
 #
-# For a fully frozen, machine-specific lock (exact build strings included):
-#   conda env export --no-builds > environment.lock.yml
+# conda-lock.yml is the fully resolved, multi-platform lock generated from
+# this file: every transitive package pinned to an exact build (osx-arm64
+# and linux-64). Install a bit-identical environment from it with:
+#   conda-lock install -n p312 conda-lock.yml
 name: p312
 channels:
   - conda-forge
@@ -47,9 +49,14 @@ dependencies:
   - nbconvert=7.16.6
   - ipykernel=6.29.5          # kernel for `jupyter nbconvert --execute`
   - notebook=7.3.2            # interactive inspection of the verify notebooks
-  # ── dev tooling (lint / type-check / test / git hooks) ───────────────────
+  # ── dev tooling (lint / test / git hooks) ────────────────────────────────
   - ruff=0.15.12
-  - mypy=2.1.0
   - pytest=9.0.3
   - hypothesis=6.152.7        # property-based tests (tests/test_properties.py)
   - pre-commit=4.6.0
+  # ── pip-only ─────────────────────────────────────────────────────────────
+  # mypy 2.x is not published to conda-forge (its feed stops at the 1.x
+  # series), so the type-checker is installed with pip as the final step.
+  - pip
+  - pip:
+    - mypy==2.1.0

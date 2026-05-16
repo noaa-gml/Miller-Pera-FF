@@ -59,6 +59,7 @@ CODE_FILES = [
     "pyproject.toml",
     "environment.yml",
     "requirements.txt",
+    "conda-lock.yml",
     "Makefile",
     "verify.ipynb",
     "verify_nrt.ipynb",
