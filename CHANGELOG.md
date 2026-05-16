@@ -83,8 +83,9 @@ inversion runs can reach into 2026 before the next Energy Institute release
 - `CHANGELOG.md` added.
 - **Release metadata:** `CITATION.cff` gives a software + dataset citation
   (GitHub "Cite this repository"); `CONTRIBUTING.md` documents the developer
-  workflow and the files that must stay version-synced. Released pipeline
-  states are git-tagged; `v1.0.0` is the first public release.
+  workflow and the files that must stay version-synced; `LICENSE.md` carries
+  the NOAA / U.S. Department of Commerce notice. Released pipeline states are
+  git-tagged; `v1.0.0` is the first public release.
 
 ---
 

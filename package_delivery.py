@@ -39,7 +39,7 @@ METHODS = ("assumed", "cm_yearly")
 # Copied verbatim into <outdir>/
 DOC_FILES = [
     "README.md", "methodology.html", "landing_page.html",
-    "summary_figure.png", "CHANGELOG.md", "CITATION.cff",
+    "summary_figure.png", "CHANGELOG.md", "CITATION.cff", "LICENSE.md",
 ]
 
 # Copied into <outdir>/code/
