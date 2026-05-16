@@ -20,7 +20,6 @@ Outputs:
 
 import json
 import warnings
-from datetime import UTC, datetime
 from glob import glob
 from itertools import product
 
@@ -51,6 +50,7 @@ from config import (
 )
 from constants import EARTH_RADIUS
 from country_names import load_aliases, load_canonical, validate_names
+from timeutils import seconds_in_year
 
 pd.set_option("future.no_silent_downcasting", True)
 xr.set_options(keep_attrs=True)  # type: ignore[no-untyped-call]
@@ -180,14 +180,6 @@ def _read_ei_global(sheet: str, skipfooter: int) -> pd.Series:
     row = df.loc["Total World"]
     year_cols = [c for c in row.index if isinstance(c, (int, float)) and float(c) == int(c)]
     return row[year_cols].rename(lambda c: int(c))
-
-
-def seconds_in_year(year: int) -> float:
-    """Seconds in a calendar year (doesn't handle leap seconds — unix smears them)."""
-    return (
-        datetime(year + 1, 1, 1, tzinfo=UTC).timestamp()
-        - datetime(year, 1, 1, tzinfo=UTC).timestamp()
-    )
 
 
 def _load_and_regrid_edgar(

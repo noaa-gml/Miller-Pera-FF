@@ -57,6 +57,7 @@ from config import (
 )
 from constants import C_MOLAR_MASS, EARTH_RADIUS
 from provenance import provenance_attrs
+from timeutils import seconds_in_month, seconds_in_year
 
 xr.set_options(keep_attrs=True)  # type: ignore[no-untyped-call]
 
@@ -73,18 +74,6 @@ YR3           = LAST_CM_YEAR           # last year in data (partial — through 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Helper functions
 # ═══════════════════════════════════════════════════════════════════════════════
-
-def seconds_in_month(year: int, month: int) -> float:
-    """Calendar-accurate seconds in a given month."""
-    t0 = datetime(year, month, 1, tzinfo=UTC)
-    t1 = t0 + relativedelta(months=1)
-    return (t1 - t0).total_seconds()
-
-
-def seconds_in_year(year: int) -> float:
-    """Calendar-accurate seconds in a given year."""
-    return (datetime(year + 1, 1, 1, tzinfo=UTC) - datetime(year, 1, 1, tzinfo=UTC)).total_seconds()
-
 
 def cell_areas_m2(earth_radius_km: float = EARTH_RADIUS) -> np.ndarray:
     """Compute 1x1 cell areas in m2 using xESMF, shape (180, 360)."""

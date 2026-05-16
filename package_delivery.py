@@ -52,6 +52,7 @@ CODE_FILES = [
     "split_ct.py",
     "country_names.py",
     "constants.py",
+    "timeutils.py",
     "config.py",
     "provenance.py",
     "compare_methods.py",

@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 LIGHT_MODULES = [
     "config",
     "constants",
+    "timeutils",
     "country_names",
     "provenance",
     "download_carbon_monitor",

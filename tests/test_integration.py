@@ -28,6 +28,7 @@ import xarray as xr
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from constants import C_MOLAR_MASS
 from split_ct import build_carbontracker_dataset
+from timeutils import seconds_in_year
 
 # ── post_process import probe (geospatial stack may be absent in CI) ─────────
 try:
@@ -153,7 +154,7 @@ def test_gg_to_mol_to_pgc_roundtrip() -> None:
     gg_per_cell = 1000.0          # Gg C / cell / yr
     yr = 2010
     areas_m2 = np.full((4, 4), 5.0e10)
-    sec_yr = post_process.seconds_in_year(yr)
+    sec_yr = seconds_in_year(yr)
 
     mol_per_m2_s = gg_per_cell * 1e9 / C_MOLAR_MASS / areas_m2 / sec_yr
     data_yr = np.broadcast_to(mol_per_m2_s, (12, 4, 4)).copy()  # 12 identical months
@@ -161,11 +162,3 @@ def test_gg_to_mol_to_pgc_roundtrip() -> None:
     pgc = post_process._annual_pgc(data_yr, areas_m2, yr)
     expected = gg_per_cell * 16 * 1e-6   # 16 cells, Gg → Pg
     assert abs(pgc - expected) <= 1e-9 * expected
-
-
-@requires_post_process
-@pytest.mark.parametrize("year", [1999, 2000, 2024, 2025])
-def test_month_lengths_sum_to_year_length(year: int) -> None:
-    """The 12 monthly second-counts sum to the year's — leap years included."""
-    total = sum(post_process.seconds_in_month(year, m) for m in range(1, 13))
-    assert total == post_process.seconds_in_year(year)
