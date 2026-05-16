@@ -1,17 +1,21 @@
 name: CI
 
-# Lint, type-check, and unit-test on every push and pull request.
+# Two jobs run on every push and pull request:
 #
-# CI installs the exact pinned set from requirements.txt. That file is the
-# pip-installable subset of the environment; the conda-only geospatial
-# extras (xesmf / xcdat / esmpy) are deliberately absent. No unit test
-# imports the modules that need them (ingest / post_process), and mypy is
-# configured with `ignore_missing_imports = true`, so this is enough to run
-# all three gates. The data-dependent tests (schema / grid / ratio checks)
-# skip gracefully when the gitignored input files aren't present — which
-# they won't be in CI.
+#   checks        Fast gate. Installs the pip-only subset (requirements.txt)
+#                 and runs ruff + mypy + pytest. The conda-only geospatial
+#                 extras (xesmf / xcdat / esmpy) are absent, so the tests
+#                 that need them skip — see tests/test_imports.py and the
+#                 data-dependent schema / grid / ratio tests.
 #
-# Full reproduction of the pipeline needs the conda env (environment.yml).
+#   conda-checks  Full environment. Builds the exact pinned conda env from
+#                 environment.yml and runs pytest with the complete stack,
+#                 so the geospatial modules (ingest / post_process) are
+#                 actually imported and exercised. Doubles as a check that
+#                 environment.yml still solves on conda-forge.
+#
+# The data-dependent tests skip gracefully when the gitignored input files
+# aren't present — which they won't be in CI.
 
 on:
   push:
@@ -19,6 +23,7 @@ on:
 
 jobs:
   checks:
+    name: lint + type + test (pip subset)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,4 +49,24 @@ jobs:
       - name: Pytest (unit tests)
         # Data-dependent tests skip when inputs/ xlsx + processed_inputs/
         # aren't present; the pure-function tests run fully.
+        run: pytest
+
+  conda-checks:
+    name: conda env + full test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the pinned conda environment
+        # Solving environment.yml here is itself a test: it catches a pin
+        # that no longer resolves on conda-forge.
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-file: environment.yml
+          cache-environment: true
+
+      - name: Pytest (full geospatial stack)
+        # With xesmf / xcdat present the modules the lightweight job cannot
+        # import (ingest / post_process) are exercised here.
+        shell: bash -el {0}
         run: pytest
