@@ -1,0 +1,36 @@
+# Conda environment for the Miller-Pera FF pipeline.
+#
+#   conda env create -f environment.yml
+#   conda activate p312
+#
+# xesmf and xcdat are conda-forge only (xesmf pulls the ESMF binary), so the
+# whole environment is built from conda-forge. Version floors below are the
+# versions this pipeline was developed and tested against (May 2026); newer
+# point releases are expected to work.
+name: p312
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  # ── core scientific stack ────────────────────────────────────────────────
+  - numpy>=2.3
+  - scipy>=1.17
+  - pandas>=2.2
+  - xarray>=2024.11
+  - netcdf4>=1.7
+  - openpyxl>=3.1           # CDIAC / EI / USGS .xlsx reading
+  - python-dateutil>=2.9
+  - matplotlib-base>=3.10   # summary + comparison figures
+  # ── CF / units / regridding ──────────────────────────────────────────────
+  - cf_xarray>=0.10
+  - pint-xarray>=0.6
+  - xcdat>=0.11             # monkey-patches .bounds.add_time_bounds
+  - xesmf>=0.8              # EDGAR 0.1° → 1° regridding
+  # ── notebooks ────────────────────────────────────────────────────────────
+  - ipython>=8.30
+  - nbconvert>=7.16
+  - jupyter
+  # ── dev tooling (lint / type-check / test) ───────────────────────────────
+  - ruff>=0.15
+  - mypy>=1.11
+  - pytest>=9.0
