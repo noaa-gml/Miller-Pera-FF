@@ -58,12 +58,14 @@ When CM publishes a new month (e.g., April 2026 lands in late May), re-run from 
 
 ## Output Formats
 
+`<method>` is the v2026b annual-baseline method — `assumed` or `cm_yearly` (see [v2026b NRT Extension](#v2026b-nrt-extension--carbonmonitor-through-april-2026)). The pipeline is run once per method.
+
 | Format | Location | Description |
 |---|---|---|
-| **Monolithic** | `outputs/gml_ff_co2_2026.nc` | All years in one file (verification & plotting) |
-| **TM5 per-year** | `outputs/yearly/gml_ff_co2_2026.{YYYY}.nc` | `fossil_imp` (time, lat, lon), float32, 33 files |
-| **CarbonTracker per-year** | `outputs/ct/flux1x1_ff.{YYYY}.nc` | CT conventions (`date`, `date_bounds`, `decimal_date`), 33 files |
-| **CarbonTracker per-month** | `outputs/ct/flux1x1_ff.{YYYYMM}.nc` | Same conventions, 396 files |
+| **Monolithic** | `outputs/gml_ff_co2_2026b_<method>.nc` | All 400 months (1993-01 … 2026-04) in one file (verification & plotting) |
+| **TM5 per-year** | `outputs/yearly/gml_ff_co2_2026b_<method>.{YYYY}.nc` | `fossil_imp` (time, lat, lon), float32 — 33 full years (1993–2025); the partial 2026 has no per-year file |
+| **CarbonTracker per-year** | `outputs/ct/flux1x1_ff_<method>.{YYYY}.nc` | CT conventions (`date`, `date_bounds`, `decimal_date`), 33 files |
+| **CarbonTracker per-month** | `outputs/ct/flux1x1_ff_<method>.{YYYYMM}.nc` | Same conventions, 400 files (1993-01 … 2026-04) |
 
 Units: `mol m⁻² s⁻¹` on a global 1° × 1° grid (180 × 360), monthly time steps.
 
@@ -257,23 +259,25 @@ If you are reading this on the HPC or in a delivered output directory, the layou
 
 ```
 ./
-├── README.md                       ← this file
-├── split_ct.py                ← script that produced the CT-format files below
-├── flux1x1_ff.1993.nc              ← CarbonTracker-format, per-year (33 files)
-├── flux1x1_ff.199301.nc            ← CarbonTracker-format, per-month (396 files)
+├── README.md                          ← this file
+├── split_ct.py                        ← script that produced the CT-format files below
+├── flux1x1_ff_<method>.1993.nc         ← CarbonTracker-format, per-year (33 files)
+├── flux1x1_ff_<method>.199301.nc       ← CarbonTracker-format, per-month (400 files)
 ├── ...
-├── flux1x1_ff.2025.nc
-├── flux1x1_ff.202512.nc
-└── from_ash/
-    └── gml_ff_co2_2026.nc              ← monolithic source file (all years, all variables)
+├── flux1x1_ff_<method>.2026.nc
+├── flux1x1_ff_<method>.202604.nc
+└── from_gml/
+    └── gml_ff_co2_2026b_<method>.nc     ← monolithic source file (all months, all variables)
 ```
 
-### CarbonTracker-Format Files (`flux1x1_ff.*.nc`)
+`<method>` is `assumed` or `cm_yearly` — the v2026b annual-baseline method.
+
+### CarbonTracker-Format Files (`flux1x1_ff_<method>.*.nc`)
 
 | Pattern | Description |
 |---|---|
-| `flux1x1_ff.{YYYY}.nc` | Per-year CarbonTracker-format. Variable `fossil_imp` (date, lat, lon) with `decimal_date`, `date_components`, `date_bounds`. 33 files (1993–2025). |
-| `flux1x1_ff.{YYYYMM}.nc` | Per-month CarbonTracker-format. Same variables, 396 files (one per month). |
+| `flux1x1_ff_<method>.{YYYY}.nc` | Per-year CarbonTracker-format. Variable `fossil_imp` (date, lat, lon) with `decimal_date`, `date_components`, `date_bounds`. 33 files (full years 1993–2025). |
+| `flux1x1_ff_<method>.{YYYYMM}.nc` | Per-month CarbonTracker-format. Same variables, 400 files (1993-01 … 2026-04). |
 
 CarbonTracker conventions:
 - Time dimension named `date` (midpoint of each month)
@@ -282,13 +286,13 @@ CarbonTracker conventions:
 - CarbonTracker global attributes (Notes, disclaimer, contact info)
 - Only `fossil_imp` + coordinate bounds (no diagnostic variables)
 
-### Monolithic Source File (`from_ash/gml_ff_co2_2026.nc`)
+### Monolithic Source File (`from_gml/gml_ff_co2_2026b_<method>.nc`)
 
-All years in one file, used as input to `split_ct.py`. Contains `fossil_imp` (mol/m²/s) and `fossil_imp_cell` (mol/cell/yr), 1°×1°, monthly 1993-01 through 2025-12.
+All 400 months in one file, used as input to `split_ct.py`. Contains `fossil_imp` (mol/m²/s) and `fossil_imp_cell` (mol/cell/yr), 1°×1°, monthly 1993-01 through 2026-04.
 
 ### TM5/Fortran Per-Year Files (in the development repo)
 
-The per-year TM5-format files (`gml_ff_co2_2026.{YYYY}.nc`) are generated during production but are **not** included in this HPC directory. They live in the development repo under `outputs/yearly/`. If you need them, see the repository.
+The per-year TM5-format files (`gml_ff_co2_2026b_<method>.{YYYY}.nc`) are generated during production but are **not** included in this HPC directory. They live in the development repo under `outputs/yearly/`. If you need them, see the repository.
 
 The NetCDF dimension order `(time, lat, lon)` maps to the Fortran column-major buffer `ff_input(nlon360, nlat180, 12)` = `(lon, lat, time)` as expected.
 
@@ -368,43 +372,43 @@ python ff_country.py
   - Global totals are extrapolated independently using the same source ratios
   - Assumed 2025 rates are configured in step 3a′ of `main()` — update these when better data becomes available
 
-- **Inputs:** All files from `processed_inputs/` (CDIAC, EI, USGS cement ratios, EDGAR spatial patterns)
-- **Output:** `outputs/ff_monthly_2026b_py.npz`
+- **Inputs:** All files from `processed_inputs/` (CDIAC, EI, USGS cement ratios, EDGAR spatial patterns, CarbonMonitor ratios)
+- **Output:** `outputs/ff_monthly_2026b_<method>_py.npz`
 
 ## Step 3: Post-Process to netCDF
 
-**`post_process.py`** — Loads the `.npz` output from Step 2, converts units (Gg C → mol/m²/s), cross-validates the conversion against an independent pint-based computation, and writes:
+**`post_process.py --method <method>`** — Loads the `.npz` output from Step 2, converts units (Gg C → mol/m²/s), cross-validates the conversion against an independent pint-based computation, truncates to the partial-year boundary (April 2026), and writes:
 
-1. **Per-year files** to `outputs/yearly/` — one `.nc` per year, dims `(time, lat, lon)`, variable `fossil_imp`, float32. These are the files TM5 reads.
-2. **Monolithic file** `outputs/gml_ff_co2_2026.nc` — all years in one file for verification and plotting.
+1. **Per-year files** to `outputs/yearly/` — one `.nc` per full year, dims `(time, lat, lon)`, variable `fossil_imp`, float32. These are the files TM5 reads. The partial final year (2026) has no per-year file.
+2. **Monolithic file** `outputs/gml_ff_co2_2026b_<method>.nc` — all 400 months in one file for verification and plotting.
 3. Calls `split_ct.py` to produce CarbonTracker-format files (see below).
 
 Built-in verification checks: input quality (NaN/Inf/negative), cell areas sum to 4πR², time monotonicity, global totals (5–15 PgC/yr, <20% YoY change), round-trip read-back, cross-validation with pint-based unit chain.
 
 ```bash
-python post_process.py
+python post_process.py --method assumed      # or --method cm_yearly
 ```
 
-- **Input:** `outputs/ff_monthly_2026b_py.npz`
-- **Output:** `outputs/yearly/gml_ff_co2_2026.{YYYY}.nc` (33 files), `outputs/gml_ff_co2_2026.nc`
+- **Input:** `outputs/ff_monthly_2026b_<method>_py.npz`
+- **Output:** `outputs/yearly/gml_ff_co2_2026b_<method>.{YYYY}.nc` (33 full-year files), `outputs/gml_ff_co2_2026b_<method>.nc`
 
 ## Step 3b: CarbonTracker-Format Split
 
-**`split_ct.py`** — Reads the monolithic `outputs/gml_ff_co2_2026.nc` and writes CarbonTracker-format per-year and per-month files. Automatically called by `post_process.py`, but can also be run standalone.
+**`split_ct.py --method <method>`** — Reads the monolithic `outputs/gml_ff_co2_2026b_<method>.nc` and writes CarbonTracker-format per-year and per-month files. Automatically called by `post_process.py`, but can also be run standalone.
 
 Output format:
 - Time dim named `date` (midpoint of each month)
 - `date_bounds`, `decimal_date` (leap-year aware), `date_components` (int32), `calendar_components` (int32)
 - CarbonTracker global attributes (Notes, disclaimer, etc.)
 - Only `fossil_imp` (float32, zlib compressed) + coordinate bounds
-- Validates file counts and 12-months-per-year on output
+- Validates file counts on output (the partial final year has fewer than 12 months)
 
 ```bash
-python split_ct.py
+python split_ct.py --method assumed           # or --method cm_yearly
 ```
 
-- **Input:** `outputs/gml_ff_co2_2026.nc`
-- **Output:** `outputs/ct/flux1x1_ff.{YYYY}.nc` (33 files), `outputs/ct/flux1x1_ff.{YYYYMM}.nc` (396 files)
+- **Input:** `outputs/gml_ff_co2_2026b_<method>.nc`
+- **Output:** `outputs/ct/flux1x1_ff_<method>.{YYYY}.nc` (33 files), `outputs/ct/flux1x1_ff_<method>.{YYYYMM}.nc` (400 files)
 
 Comparison checks are in `verify_nrt.ipynb` (Check 6e).
 
@@ -459,7 +463,7 @@ Comparison checks are in `verify_nrt.ipynb` (Check 6e).
 - **3n.** USGS cement name join audit — reads all raw USGS cement CSVs, applies `USGS_RENAMES`, and checks whether each country name (after renaming, title-cased) exactly matches a CDIAC country; USGS entries that fail to match have their cement data silently replaced by the global `'Other countries'` average. Complements check 3l (CDIAC-side fallback) with the USGS-side view.
 
 *Section 4 — Processed Intermediate Checks (4a–4l):*
-- **4a.** Monthly flux array (`ff_monthly_2026b_py.npz`) — shape, time span, non-negativity, spatial coverage
+- **4a.** Monthly flux array (`ff_monthly_2026b_<method>_py.npz`) — shape, time span, non-negativity, spatial coverage
 - **4b.** Country grid land cell coverage — unique codes, ocean fraction, suspicious high-flux unassigned cells
 - **4c.** `edgar_patterns.npz` integrity — shape, value range [0, 1], no NaN
 - **4d.** GISS country grid file integrity — `COUNTRY1X1.1993.mod.txt` reshapes to (180, 360), code range valid, ocean fraction 55–80%, all code-table entries represented in the map
