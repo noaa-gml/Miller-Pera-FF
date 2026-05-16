@@ -130,7 +130,7 @@ what makes "passes on my machine" and "passes in CI" the same statement.
 
 ## The delivery bundle
 
-`send_to_ken/` is a **build artifact** — it is wiped and rebuilt from the
+`delivery/` is a **build artifact** — it is wiped and rebuilt from the
 source files by `package_delivery.py`. Never hand-edit it; edits are silently
 lost on the next rebuild. If you add a file that belongs in a delivery, add
 it to the relevant list (`DOC_FILES`, `CODE_FILES`, …) in

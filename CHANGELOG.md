@@ -76,7 +76,7 @@ inversion runs can reach into 2026 before the next Energy Institute release
   commit (and clean/dirty state), package versions, and input-file
   fingerprints that produced it (merged in by `post_process.py` and
   `split_ct.py`).
-- **Delivery:** `package_delivery.py` builds the `send_to_ken/` bundle from
+- **Delivery:** `package_delivery.py` builds the `delivery/` bundle from
   source (previously hand-copied).
 - **Shared constants:** `constants.py` — `EARTH_RADIUS`, `C_MOLAR_MASS`
   centralised (were duplicated module-level literals).

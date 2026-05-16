@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """package_delivery.py — assemble the delivery bundle from source.
 
-Replaces the error-prone manual ``cp`` sync into ``send_to_ken/``. The
+Replaces the error-prone manual ``cp`` sync into ``delivery/``. The
 delivery directory is a *build artefact*: this script wipes it and rebuilds
 it from the canonical source files, so it can never silently drift from the
 repo.
@@ -58,6 +58,7 @@ CODE_FILES = [
     "pyproject.toml",
     "environment.yml",
     "requirements.txt",
+    "Makefile",
     "verify.ipynb",
     "verify_nrt.ipynb",
 ]
@@ -185,8 +186,8 @@ def build(outdir: Path, method: str | None, *, with_outputs: bool, make_zip: boo
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     parser.add_argument(
-        "--outdir", type=Path, default=REPO / "send_to_ken",
-        help="Bundle output directory (default: send_to_ken/). Wiped + rebuilt.",
+        "--outdir", type=Path, default=REPO / "delivery",
+        help="Bundle output directory (default: delivery/). Wiped + rebuilt.",
     )
     parser.add_argument(
         "--method", choices=METHODS, default=None,
