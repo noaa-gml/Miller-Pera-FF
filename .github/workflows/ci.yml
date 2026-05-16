@@ -36,6 +36,7 @@ jobs:
             "ruff>=0.15,<0.16" \
             "mypy>=1.11,<1.18" \
             "pytest>=9.0,<10" \
+            "hypothesis>=6.0,<7" \
             "numpy>=2.3,<3" \
             "pandas>=2.2,<3" \
             "xarray>=2024.11" \

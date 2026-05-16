@@ -59,8 +59,11 @@ inversion runs can reach into 2026 before the next Energy Institute release
 
 ### Tooling
 
-- **Tests:** new `tests/` suite — 54 `pytest` tests (pure-function unit tests
-  plus schema / grid / ratio guardrails that skip when inputs are absent).
+- **Tests:** new `tests/` suite — 63 `pytest` tests: pure-function unit
+  tests, schema / grid / ratio guardrails (skip when inputs are absent), and
+  9 `hypothesis` property tests (PIQS integral preservation + continuity,
+  `_distribute_to_grid` mass conservation, `_cumulative_extrap` chaining,
+  calendar identities).
 - **CI:** `.github/workflows/ci.yml` runs ruff + mypy + pytest on every push
   and pull request.
 - **Reproducibility:** `environment.yml` pins the conda environment;

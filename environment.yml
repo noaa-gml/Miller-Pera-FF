@@ -34,4 +34,5 @@ dependencies:
   - ruff>=0.15
   - mypy>=1.11
   - pytest>=9.0
+  - hypothesis>=6.0          # property-based tests (tests/test_properties.py)
   - pre-commit>=4.0
