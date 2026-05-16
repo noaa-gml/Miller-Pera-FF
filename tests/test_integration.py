@@ -4,14 +4,14 @@ Where the unit tests exercise one function in isolation, these check that
 the *output of one pipeline stage is consumed correctly by the next*.
 
 Group A — post_process → split_ct
-    `split_ct_2026.build_carbontracker_dataset()` consumes the monolithic
-    netCDF that `post_process_2026.py` writes. We feed it a small synthetic
+    `split_ct.build_carbontracker_dataset()` consumes the monolithic
+    netCDF that `post_process.py` writes. We feed it a small synthetic
     dataset in exactly that format and verify the CarbonTracker transform.
     split_ct imports only numpy/pandas/xarray, so this group runs in CI.
 
 Group B — ff_country → post_process (unit-conversion round-trip)
     The Gg C → mol m⁻² s⁻¹ forward conversion and the PgC back-computation
-    must be mutually consistent. post_process_2026 imports the geospatial
+    must be mutually consistent. post_process imports the geospatial
     stack (xesmf/xcdat/…), so this group skips gracefully in CI and runs
     locally in the p312 env.
 """
@@ -27,18 +27,18 @@ import xarray as xr
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from constants import C_MOLAR_MASS
-from split_ct_2026 import build_carbontracker_dataset
+from split_ct import build_carbontracker_dataset
 
 # ── post_process import probe (geospatial stack may be absent in CI) ─────────
 try:
-    import post_process_2026
+    import post_process
     _HAVE_POST_PROCESS = True
 except ImportError:
     _HAVE_POST_PROCESS = False
 
 requires_post_process = pytest.mark.skipif(
     not _HAVE_POST_PROCESS,
-    reason="post_process_2026 import needs the geospatial stack (xesmf/xcdat/cf_xarray)",
+    reason="post_process import needs the geospatial stack (xesmf/xcdat/cf_xarray)",
 )
 
 
@@ -48,7 +48,7 @@ requires_post_process = pytest.mark.skipif(
 
 @pytest.fixture
 def synthetic_monolithic() -> xr.Dataset:
-    """A minimal stand-in for post_process_2026.py's monolithic netCDF.
+    """A minimal stand-in for post_process.py's monolithic netCDF.
 
     Two years (24 months) on a 2×2 grid — just enough structure for
     `build_carbontracker_dataset` to chew on: `fossil_imp`, `time_bnds`
@@ -153,12 +153,12 @@ def test_gg_to_mol_to_pgc_roundtrip() -> None:
     gg_per_cell = 1000.0          # Gg C / cell / yr
     yr = 2010
     areas_m2 = np.full((4, 4), 5.0e10)
-    sec_yr = post_process_2026.seconds_in_year(yr)
+    sec_yr = post_process.seconds_in_year(yr)
 
     mol_per_m2_s = gg_per_cell * 1e9 / C_MOLAR_MASS / areas_m2 / sec_yr
     data_yr = np.broadcast_to(mol_per_m2_s, (12, 4, 4)).copy()  # 12 identical months
 
-    pgc = post_process_2026._annual_pgc(data_yr, areas_m2, yr)
+    pgc = post_process._annual_pgc(data_yr, areas_m2, yr)
     expected = gg_per_cell * 16 * 1e-6   # 16 cells, Gg → Pg
     assert abs(pgc - expected) <= 1e-9 * expected
 
@@ -167,5 +167,5 @@ def test_gg_to_mol_to_pgc_roundtrip() -> None:
 @pytest.mark.parametrize("year", [1999, 2000, 2024, 2025])
 def test_month_lengths_sum_to_year_length(year: int) -> None:
     """The 12 monthly second-counts sum to the year's — leap years included."""
-    total = sum(post_process_2026.seconds_in_month(year, m) for m in range(1, 13))
-    assert total == post_process_2026.seconds_in_year(year)
+    total = sum(post_process.seconds_in_month(year, m) for m in range(1, 13))
+    assert total == post_process.seconds_in_year(year)

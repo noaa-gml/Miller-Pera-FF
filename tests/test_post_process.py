@@ -1,4 +1,4 @@
-"""Regression tests for post_process_2026.py.
+"""Regression tests for post_process.py.
 
 These don't run the full pipeline (too slow); they isolate small invariants
 that have caused real bugs.
@@ -13,7 +13,7 @@ from dateutil.relativedelta import relativedelta  # type: ignore[import-untyped]
 
 
 def _build_times(n_months: int, yr_start: int = 1993) -> list[datetime]:
-    """Same construction post_process_2026.py uses."""
+    """Same construction post_process.py uses."""
     first_day = date(yr_start, 1, 15)
     return [
         datetime.combine(first_day + relativedelta(months=m), dtime.min, tzinfo=UTC)

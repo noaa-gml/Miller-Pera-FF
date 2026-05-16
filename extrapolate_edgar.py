@@ -3,7 +3,7 @@
 available year using an empirically-derived annual growth rate.
 
 EDGAR releases lag real-time by ~2 years.  This script creates "FAKE" files
-that extend coverage to the years needed by the pipeline (ingest_2026.py).
+that extend coverage to the years needed by the pipeline (ingest.py).
 
 Runs over all three sector directories (TOTALS, NMM, PRO_FFF).  For each
 sector the growth rate is estimated from the last N_YEARS_FOR_RATE real EDGAR

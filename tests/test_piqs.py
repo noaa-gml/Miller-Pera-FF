@@ -1,4 +1,4 @@
-"""Tests for the PIQS spline (Rasmussen 1991) implementation in ff_country_2026."""
+"""Tests for the PIQS spline (Rasmussen 1991) implementation in ff_country."""
 from __future__ import annotations
 
 import sys
@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from ff_country_2026 import _piqs
+from ff_country import _piqs
 
 
 def _eval_spline(fit: np.ndarray, x: np.ndarray, t: float) -> float:

@@ -17,7 +17,7 @@ Bundle layout::
     └── outputs/      (only with --with-outputs)
         ├── gml_ff_co2_2026b_<method>.nc
         ├── ct/flux1x1_ff_<method>.*.nc
-        └── verify_2026_report.html, v2026b_method_comparison.{md,png}
+        └── verify_report.html, v2026b_method_comparison.{md,png}
 
 Usage::
 
@@ -46,17 +46,17 @@ DOC_FILES = [
 CODE_FILES = [
     "download_carbon_monitor.py",
     "extrapolate_edgar.py",
-    "ingest_2026.py",
-    "ff_country_2026.py",
-    "post_process_2026.py",
-    "split_ct_2026.py",
+    "ingest.py",
+    "ff_country.py",
+    "post_process.py",
+    "split_ct.py",
     "country_names.py",
     "constants.py",
     "config.py",
-    "compare_methods_2026b.py",
+    "compare_methods.py",
     "pyproject.toml",
-    "verify_2026.ipynb",
-    "verify_2026b.ipynb",
+    "verify.ipynb",
+    "verify_nrt.ipynb",
 ]
 
 # Small reference inputs country_names.py needs at runtime.
@@ -67,7 +67,7 @@ CODE_INPUT_FILES = [
 
 # Optional output extras copied alongside the NetCDFs.
 OUTPUT_EXTRAS = [
-    "verify_2026_report.html",
+    "verify_report.html",
     "v2026b_method_comparison.md",
     "v2026b_method_comparison.png",
 ]
@@ -112,7 +112,7 @@ def _copy_outputs(outdir: Path, method: str) -> list[str]:
     mono = out_src / f"gml_ff_co2_2026b_{method}.nc"
     if not mono.exists():
         raise FileNotFoundError(
-            f"{mono} not found — run ff_country_2026.py + post_process_2026.py "
+            f"{mono} not found — run ff_country.py + post_process.py "
             f"--method {method} first",
         )
     _copy(mono, out_dst / mono.name)

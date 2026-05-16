@@ -2,7 +2,7 @@
 
 Catches the silent-data-loss case where a CDIAC country has no matching
 grid cells in the GISS country map (its emissions would be silently
-dropped). Already done in verify_2026.ipynb check 1e, but here it runs
+dropped). Already done in verify.ipynb check 1e, but here it runs
 fast as a unit test rather than during a manual notebook session.
 """
 from __future__ import annotations
@@ -44,7 +44,7 @@ def cdiac_countries() -> list[str]:
 
 
 def test_cdiac_country_count_matches_codes(cdiac_countries, codes_table):
-    """ff_country_2026 relies on POSITIONAL alignment between CDIAC list and code table."""
+    """ff_country relies on POSITIONAL alignment between CDIAC list and code table."""
     assert len(cdiac_countries) == len(codes_table), (
         f"CDIAC list ({len(cdiac_countries)}) != code table ({len(codes_table)}) — "
         "ff_country's positional matching will be wrong"

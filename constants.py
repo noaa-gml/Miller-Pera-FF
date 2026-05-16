@@ -3,7 +3,7 @@
 Single source of truth for values that more than one pipeline stage needs.
 Defining them once here removes the risk of the copies silently drifting
 apart (they were previously duplicated as module-level literals in
-``ingest_2026.py``, ``post_process_2026.py``, and ``compare_methods_2026b.py``).
+``ingest.py``, ``post_process.py``, and ``compare_methods.py``).
 
 These are *physical* constants — unlike the per-year configuration
 (``STARTING_YEAR``, ``LAST_CDIAC_YEAR``, …) they never change when the

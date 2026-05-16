@@ -9,7 +9,7 @@ invariants hold for *all* of them:
 * `_distribute_to_grid` — per-country mass conservation onto the grid.
 * `_is_leap` / `_days_per_month` — calendar identities vs the stdlib.
 
-All functions under test live in ff_country_2026.py, which imports only
+All functions under test live in ff_country.py, which imports only
 numpy + pandas — so this whole file runs in CI without the geospatial stack.
 """
 from __future__ import annotations
@@ -24,7 +24,7 @@ from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from ff_country_2026 import (
+from ff_country import (
     _cumulative_extrap,
     _days_per_month,
     _distribute_to_grid,

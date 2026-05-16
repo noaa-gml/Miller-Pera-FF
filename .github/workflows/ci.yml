@@ -4,7 +4,7 @@ name: CI
 #
 # This job deliberately does NOT install the heavy geospatial stack
 # (xesmf / xcdat / cf_xarray / pint). None of the unit tests import the
-# modules that need it (ingest_2026 / post_process_2026), and mypy is
+# modules that need it (ingest / post_process), and mypy is
 # configured with `ignore_missing_imports = true`, so a lightweight pip
 # install is enough to run all three gates. The data-dependent tests
 # (schema / grid / ratio checks) skip gracefully when the gitignored

@@ -10,7 +10,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from download_carbon_monitor import EXPECTED_HEADER, EXPECTED_SECTORS
-from ff_country_2026 import _apply_cm_monthly_overwrite
+from ff_country import _apply_cm_monthly_overwrite
 
 REPO = Path(__file__).parent.parent
 

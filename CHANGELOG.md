@@ -40,19 +40,19 @@ inversion runs can reach into 2026 before the next Energy Institute release
 
 - **`download_carbon_monitor.py`** — fetches the CarbonMonitor global daily
   CSV, validates schema + coverage, idempotent.
-- **`ingest_2026.py`** — new `_load_carbon_monitor()` step: harmonises CM
+- **`ingest.py`** — new `_load_carbon_monitor()` step: harmonises CM
   country names, drops aviation sectors + the EU27 aggregate, writes
   per-country monthly totals, intra-year ratios, YoY ratios, and a yearly
   proxy ratio to `processed_inputs/`.
-- **`ff_country_2026.py`** — extended to 2026 with a `--method` switch and a
+- **`ff_country.py`** — extended to 2026 with a `--method` switch and a
   new `_apply_cm_monthly_overwrite()` step (year-over-year anchored, after a
   v2026b-internal revision away from an intra-year anchor that imposed CM
   seasonality on non-seasonal regions).
-- **`post_process_2026.py`** / **`split_ct_2026.py`** — partial-year aware;
+- **`post_process.py`** / **`split_ct.py`** — partial-year aware;
   `--method`-tagged output filenames; `v2026b_annual_method` global attribute.
-- **`compare_methods_2026b.py`** — new: side-by-side comparison report
+- **`compare_methods.py`** — new: side-by-side comparison report
   (markdown + 2×2 figure).
-- **`verify_2026b.ipynb`** — new: 3 partial-year-aware checks (structure,
+- **`verify_nrt.ipynb`** — new: 3 partial-year-aware checks (structure,
   per-cell YoY overwrite, bounded spline-propagation noise).
 - Bug fix: `_apply_cm_monthly_overwrite()` no longer overwrites a month with
   a prior-year copy when every CM ratio for that month is NaN.
@@ -100,8 +100,8 @@ atmospheric inversion systems.
 
 ### Pipeline / tooling
 
-- Six-stage pipeline: `extrapolate_edgar` → `ingest_2026` → `ff_country_2026`
-  → `post_process_2026` → `split_ct_2026`, plus `verify_2026.ipynb`
+- Six-stage pipeline: `extrapolate_edgar` → `ingest` → `ff_country`
+  → `post_process` → `split_ct`, plus `verify.ipynb`
   (90+ automated quality checks).
 - `country_names.py` + `inputs/country_aliases.json` — single-source country
   harmonisation (189 canonical countries).

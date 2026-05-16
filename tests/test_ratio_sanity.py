@@ -4,7 +4,7 @@ For EI, USGS, and CarbonMonitor we expect ratios to land in a plausible
 range — anything outside [0.1, 10] would mean a 10× or 0.1× scaling of
 emissions, which is almost certainly bad data rather than real.
 
-Already enforced in verify_2026.ipynb check 3d; here we run them as
+Already enforced in verify.ipynb check 3d; here we run them as
 fast unit tests that fail loud before delivery.
 """
 from __future__ import annotations

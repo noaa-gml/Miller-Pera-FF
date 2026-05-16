@@ -96,7 +96,7 @@ def test_usgs_cement_2025_schema():
     expected = {"Nation", "Cement 2024 (Gg)", "Cement 2025 (Gg)"}
     missing = expected - set(df.columns)
     assert not missing, f"USGS mcs2026 missing columns: {missing}"
-    # Sentinel rows the ingest depends on (string-matched in ingest_2026.py)
+    # Sentinel rows the ingest depends on (string-matched in ingest.py)
     nations = set(df["Nation"].dropna())
     assert any("World total" in n for n in nations), \
         "Expected 'World total (rounded)' or similar sentinel row"
