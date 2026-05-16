@@ -10,7 +10,7 @@ abstract: >-
   Energy Institute, and USGS are combined with EDGAR spatial patterns and,
   for the near-real-time extension, CarbonMonitor daily emissions.
 type: software
-version: 2.0.0
+version: 1.0.0
 date-released: "2026-05-15"
 repository-code: "https://github.com/noaa-gml/miller-ff"
 url: "https://github.com/noaa-gml/miller-ff"
@@ -61,6 +61,6 @@ preferred-citation:
       orcid: "https://orcid.org/0000-0001-8630-1610"
   notes: >-
     Archived dataset of record (NOAA GML data archive id 193). The
-    repository's current release (v2.0.0) also produces v2026b, a
+    repository's current release (v1.0.0) also produces v2026b, a
     near-real-time extension through April 2026 that is not separately
     archived; see CHANGELOG.md.
