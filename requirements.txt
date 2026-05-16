@@ -1,0 +1,50 @@
+# requirements.txt — exact pip pins for the Miller-Pera FF pipeline.
+#
+#   python -m pip install -r requirements.txt
+#
+# Frozen to the exact versions the v2026b product was built and validated
+# against (May 2026). Exact pins are deliberate: an unpinned dependency
+# that shifts a binary ABI is how a silently-wrong numerical output
+# happens — this is the lesson of the PyFerret numpy-ABI breakage. The
+# versions that produced an output file are also recorded inside the file
+# itself (see provenance.py).
+#
+# SCOPE: this is the pip-installable subset. It is what CI installs, and is
+# enough for the lint / type-check / test gates and every pipeline stage
+# EXCEPT the EDGAR 0.1deg -> 1deg regrid. Three dependencies are conda-forge
+# only and are NOT listed below; for a complete, runnable environment use
+# conda, which installs them at these same pinned versions:
+#
+#   conda env create -f environment.yml      # canonical, fully reproducible
+#
+#     xcdat  0.11.2   (not published to PyPI)
+#     xesmf  0.8.8    (binds the compiled ESMF library)
+#     esmpy  8.9.1    (compiled ESMF library)
+
+# ── core scientific stack ──
+numpy==2.3.5
+scipy==1.17.0
+pandas==2.2.3
+xarray==2024.11.0
+netCDF4==1.7.4
+cftime==1.6.4
+openpyxl==3.1.5
+python-dateutil==2.9.0.post0
+matplotlib==3.10.0
+
+# ── CF / units ──
+cf-xarray==0.10.11
+pint==0.25.2
+pint-xarray==0.6.0
+
+# ── notebook execution (verify.ipynb / verify_nrt.ipynb) ──
+ipython==8.30.0
+nbconvert==7.16.6
+ipykernel==6.29.5
+
+# ── dev tooling (lint / type-check / test / git hooks) ──
+ruff==0.15.12
+mypy==2.1.0
+pytest==9.0.3
+hypothesis==6.152.7
+pre-commit==4.6.0

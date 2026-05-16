@@ -3,36 +3,53 @@
 #   conda env create -f environment.yml
 #   conda activate p312
 #
-# xesmf and xcdat are conda-forge only (xesmf pulls the ESMF binary), so the
-# whole environment is built from conda-forge. Version floors below are the
-# versions this pipeline was developed and tested against (May 2026); newer
-# point releases are expected to work.
+# xcdat, xesmf and esmpy are conda-forge only (xesmf binds the compiled
+# ESMF library via esmpy; xcdat is not published to PyPI), so the whole
+# environment is built from conda-forge for a consistent binary stack.
+#
+# Versions are pinned EXACTLY to the set the v2026b product was built and
+# validated against (May 2026). Exact pins are deliberate: an unpinned
+# dependency that shifts a binary ABI is exactly how a silently-wrong
+# numerical output happens — this is the lesson of the PyFerret numpy-ABI
+# breakage. The versions that produced an output file are also recorded
+# inside the file itself (see provenance.py).
+#
+# To move to newer releases: bump the pins here, re-run the verification
+# notebooks (verify.ipynb / verify_nrt.ipynb), and update requirements.txt
+# in the same commit so the two stay in step.
+#
+# For a fully frozen, machine-specific lock (exact build strings included):
+#   conda env export --no-builds > environment.lock.yml
 name: p312
 channels:
   - conda-forge
 dependencies:
-  - python=3.12
+  - python=3.12.2
   # ── core scientific stack ────────────────────────────────────────────────
-  - numpy>=2.3
-  - scipy>=1.17
-  - pandas>=2.2
-  - xarray>=2024.11
-  - netcdf4>=1.7
-  - openpyxl>=3.1           # CDIAC / EI / USGS .xlsx reading
-  - python-dateutil>=2.9
-  - matplotlib-base>=3.10   # summary + comparison figures
+  - numpy=2.3.5
+  - scipy=1.17.0
+  - pandas=2.2.3
+  - xarray=2024.11.0
+  - netcdf4=1.7.4
+  - cftime=1.6.4              # netCDF date encoding/decoding
+  - openpyxl=3.1.5            # CDIAC / EI / USGS .xlsx reading
+  - python-dateutil=2.9.0.post0
+  - matplotlib-base=3.10.0    # summary + comparison figures
   # ── CF / units / regridding ──────────────────────────────────────────────
-  - cf_xarray>=0.10
-  - pint-xarray>=0.6
-  - xcdat>=0.11             # monkey-patches .bounds.add_time_bounds
-  - xesmf>=0.8              # EDGAR 0.1° → 1° regridding
-  # ── notebooks ────────────────────────────────────────────────────────────
-  - ipython>=8.30
-  - nbconvert>=7.16
-  - jupyter
+  - cf_xarray=0.10.11
+  - pint=0.25.2               # imported directly (must precede pint_xarray)
+  - pint-xarray=0.6.0
+  - xcdat=0.11.2              # monkey-patches .bounds.add_time_bounds
+  - xesmf=0.8.8               # EDGAR 0.1° → 1° regridding
+  - esmpy=8.9.1               # compiled ESMF library that xesmf binds to
+  # ── notebooks (verify.ipynb / verify_nrt.ipynb) ──────────────────────────
+  - ipython=8.30.0
+  - nbconvert=7.16.6
+  - ipykernel=6.29.5          # kernel for `jupyter nbconvert --execute`
+  - notebook=7.3.2            # interactive inspection of the verify notebooks
   # ── dev tooling (lint / type-check / test / git hooks) ───────────────────
-  - ruff>=0.15
-  - mypy>=1.11
-  - pytest>=9.0
-  - hypothesis>=6.0          # property-based tests (tests/test_properties.py)
-  - pre-commit>=4.0
+  - ruff=0.15.12
+  - mypy=2.1.0
+  - pytest=9.0.3
+  - hypothesis=6.152.7        # property-based tests (tests/test_properties.py)
+  - pre-commit=4.6.0

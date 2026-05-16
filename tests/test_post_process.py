@@ -9,7 +9,7 @@ from datetime import UTC, date, datetime
 from datetime import time as dtime
 
 import pytest
-from dateutil.relativedelta import relativedelta  # type: ignore[import-untyped]
+from dateutil.relativedelta import relativedelta
 
 
 def _build_times(n_months: int, yr_start: int = 1993) -> list[datetime]:

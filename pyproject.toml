@@ -81,6 +81,7 @@ ignore = [
     "RUF015",   # prefer next(iter(x))
     "PERF401",  # manual list comprehension
     "S603",     # subprocess without explicit shell=False (false-positive heavy)
+    "S607",     # partial executable path — invoking `git` on PATH is intentional
     "EXE001",   # shebang present but file not executable (chmod is build-time)
     "PLW0108",  # lambda may be unnecessary
     "F541",     # f-string without placeholder (sometimes intentional templating)

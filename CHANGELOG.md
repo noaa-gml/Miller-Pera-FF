@@ -59,23 +59,32 @@ inversion runs can reach into 2026 before the next Energy Institute release
 
 ### Tooling
 
-- **Tests:** new `tests/` suite — 76 `pytest` tests: pure-function unit
+- **Tests:** new `tests/` suite — 82 `pytest` tests: pure-function unit
   tests, schema / grid / ratio guardrails (skip when inputs are absent),
   9 `hypothesis` property tests (PIQS integral preservation + continuity,
   `_distribute_to_grid` mass conservation, `_cumulative_extrap` chaining,
-  calendar identities), and 13 integration tests for the stage-to-stage
+  calendar identities), 13 integration tests for the stage-to-stage
   contracts (post_process → split_ct CarbonTracker transform, and the
-  Gg C ↔ mol m⁻² s⁻¹ ↔ PgC conversion round-trip).
+  Gg C ↔ mol m⁻² s⁻¹ ↔ PgC conversion round-trip), and 6 provenance tests.
 - **CI:** `.github/workflows/ci.yml` runs ruff + mypy + pytest on every push
-  and pull request.
-- **Reproducibility:** `environment.yml` pins the conda environment;
-  `.pre-commit-config.yaml` runs the lint/type/hygiene gates locally on
-  commit.
+  and pull request, installing the exact pinned `requirements.txt`.
+- **Reproducibility:** `environment.yml` and `requirements.txt` pin every
+  dependency to an exact version — the set the product was built and
+  validated against. `.pre-commit-config.yaml` runs the lint/type/hygiene
+  gates locally on commit.
+- **Provenance:** `provenance.py` — every output netCDF now records the code
+  commit (and clean/dirty state), package versions, and input-file
+  fingerprints that produced it (merged in by `post_process.py` and
+  `split_ct.py`).
 - **Delivery:** `package_delivery.py` builds the `send_to_ken/` bundle from
   source (previously hand-copied).
 - **Shared constants:** `constants.py` — `EARTH_RADIUS`, `C_MOLAR_MASS`
   centralised (were duplicated module-level literals).
 - `CHANGELOG.md` added.
+- **Release metadata:** `CITATION.cff` gives a software + dataset citation
+  (GitHub "Cite this repository"); `CONTRIBUTING.md` documents the developer
+  workflow and the files that must stay version-synced. Released pipeline
+  states are git-tagged — `v1.0.0` = `2026`, `v2.0.0` = `2026b`.
 
 ---
 

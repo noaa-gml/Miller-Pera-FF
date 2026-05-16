@@ -1,0 +1,58 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software or the data product it generates, please cite
+  both the software (this entry) and the dataset (under preferred-citation).
+title: "Miller-Pera FF: a pipeline for gridded fossil-fuel CO2 emission estimates"
+abstract: >-
+  Pipeline that builds NOAA GML's gridded 1 deg x 1 deg monthly fossil-fuel
+  CO2 emission estimates for use as prior fluxes in atmospheric inversion
+  systems (CarbonTracker, TM5-4DVar). National inventories from CDIAC, the
+  Energy Institute, and USGS are combined with EDGAR spatial patterns and,
+  for the near-real-time extension, CarbonMonitor daily emissions.
+type: software
+version: 2.0.0
+date-released: "2026-05-15"
+repository-code: "https://github.com/noaa-gml/miller-ff"
+url: "https://github.com/noaa-gml/miller-ff"
+authors:
+  - family-names: Pera
+    given-names: Ashley
+    affiliation: "Cooperative Institute for Research in Environmental Sciences, University of Colorado Boulder"
+  - family-names: Jacobson
+    given-names: Andrew R.
+    affiliation: "Cooperative Institute for Research in Environmental Sciences, University of Colorado Boulder"
+  - family-names: Miller
+    given-names: John B.
+    affiliation: "NOAA Global Monitoring Laboratory"
+keywords:
+  - fossil fuel CO2 emissions
+  - carbon cycle
+  - atmospheric inversion
+  - prior fluxes
+  - CarbonTracker
+  - gridded emissions inventory
+preferred-citation:
+  type: dataset
+  title: >-
+    Gridded 1 deg x 1 deg monthly fossil-fuel CO2 emission estimates
+    (1993-2026) for use as prior fluxes in atmospheric inversion systems
+  version: "2026b"
+  year: 2026
+  month: 5
+  url: "https://github.com/noaa-gml/miller-ff"
+  institution:
+    name: "NOAA Global Monitoring Laboratory"
+  authors:
+    - family-names: Pera
+      given-names: Ashley
+      affiliation: "Cooperative Institute for Research in Environmental Sciences, University of Colorado Boulder"
+    - family-names: Jacobson
+      given-names: Andrew R.
+      affiliation: "Cooperative Institute for Research in Environmental Sciences, University of Colorado Boulder"
+    - family-names: Miller
+      given-names: John B.
+      affiliation: "NOAA Global Monitoring Laboratory"
+  notes: >-
+    Version 2026b extends the frozen 1993-2025 product through April 2026
+    using CarbonMonitor near-real-time emissions. Two annual-baseline
+    methods (assumed, cm_yearly) are distributed; see CHANGELOG.md.

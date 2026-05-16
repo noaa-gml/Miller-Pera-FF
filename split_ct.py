@@ -27,6 +27,7 @@ import pandas as pd
 import xarray as xr
 
 from config import CM_METHODS, OUTPUT_PREFIX, SOURCE_STRING, CMMethod
+from provenance import provenance_attrs
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Configuration — provenance / methods come from config.py
@@ -173,6 +174,9 @@ def main(method: CMMethod = "assumed") -> None:
 
     print("Building CarbonTracker-format dataset ...")
     ds_ct = build_carbontracker_dataset(ds_in)
+    # Run provenance (code commit, package versions, input fingerprints) —
+    # propagates to every per-year / per-month CT file sliced from ds_ct.
+    ds_ct.attrs.update(provenance_attrs(method=method))
 
     os.makedirs(CT_DIR, exist_ok=True)
 

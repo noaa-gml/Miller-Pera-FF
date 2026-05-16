@@ -39,7 +39,7 @@ METHODS = ("assumed", "cm_yearly")
 # Copied verbatim into <outdir>/
 DOC_FILES = [
     "README.md", "methodology.html", "landing_page.html",
-    "summary_figure.png", "CHANGELOG.md",
+    "summary_figure.png", "CHANGELOG.md", "CITATION.cff",
 ]
 
 # Copied into <outdir>/code/
@@ -53,8 +53,11 @@ CODE_FILES = [
     "country_names.py",
     "constants.py",
     "config.py",
+    "provenance.py",
     "compare_methods.py",
     "pyproject.toml",
+    "environment.yml",
+    "requirements.txt",
     "verify.ipynb",
     "verify_nrt.ipynb",
 ]

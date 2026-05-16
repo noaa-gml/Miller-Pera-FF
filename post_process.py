@@ -44,7 +44,7 @@ import pint_xarray  # noqa: F401  # registers the .pint accessor on xarray
 import xarray as xr
 import xcdat  # noqa: F401  # monkey-patches .bounds.add_time_bounds onto xarray
 import xesmf as xe
-from dateutil.relativedelta import relativedelta  # type: ignore[import-untyped]
+from dateutil.relativedelta import relativedelta
 
 from config import (
     CM_METHODS,
@@ -56,6 +56,7 @@ from config import (
     CMMethod,
 )
 from constants import C_MOLAR_MASS, EARTH_RADIUS
+from provenance import provenance_attrs
 
 xr.set_options(keep_attrs=True)  # type: ignore[no-untyped-call]
 
@@ -116,7 +117,9 @@ def main(method: CMMethod = "assumed") -> None:
         "history":     f"Created by ff_country.py + {os.path.basename(__file__)}\n{provenance}",
         "institution": "NOAA Global Monitoring Laboratory",
         "Conventions": "CF-1.8",
-        "v2026b_annual_method": method,
+        # Run provenance — code commit, run time, package versions, input
+        # fingerprints (includes v2026b_annual_method).
+        **provenance_attrs(method=method),
     }
 
     # ------------------------------------------------------------------
