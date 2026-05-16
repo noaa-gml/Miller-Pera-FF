@@ -110,6 +110,7 @@ ignore = [
     "PLC0415",  # late imports are fine in skip-if-missing patterns
     "N806",     # uppercase locals (H, W, SUBDIV_PREFIXES) used as constants
     "PT018",    # multi-clause asserts — fine in numpy boolean checks
+    "SLF001",   # tests legitimately exercise private (_-prefixed) functions
 ]
 
 
