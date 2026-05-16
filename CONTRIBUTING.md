@@ -22,6 +22,12 @@ Three geospatial packages — `xesmf`, `xcdat`, `esmpy` — are conda-forge only
 so conda is required for a full pipeline run: the EDGAR 0.1°→1° regrid needs
 `xesmf`, which binds the compiled ESMF library.
 
+**Let conda manage the scientific stack.** Don't `pip install` packages
+(numpy, xarray, …) into `p312`: mixing pip and conda for the same package
+leaves the environment with inconsistent metadata and, worse, ABI-mismatched
+binaries that can silently corrupt numerical output. If an env drifts into
+that state, rebuild it from `environment.yml`.
+
 `requirements.txt` is the pip-installable subset of the same pins. It is
 enough for the three gates below and every pipeline stage *except* the regrid
 — it is what CI installs — but it cannot reproduce the whole pipeline:
