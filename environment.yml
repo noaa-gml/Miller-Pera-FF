@@ -46,7 +46,7 @@ dependencies:
   - esmpy=8.9.1               # compiled ESMF library that xesmf binds to
   # ── notebooks (verify.ipynb / verify_nrt.ipynb) ──────────────────────────
   - ipython=8.30.0
-  - nbconvert=7.16.6
+  - nbconvert=7.17.1          # 7.16.x: CVE-2025-53000 + CVE-2026-39377/39378
   - ipykernel=6.29.5          # kernel for `jupyter nbconvert --execute`
   - notebook=7.3.2            # interactive inspection of the verify notebooks
   # ── dev tooling (lint / test / git hooks) ────────────────────────────────

@@ -13,14 +13,14 @@
 version: 1
 metadata:
   content_hash:
-    osx-arm64: 19c9bf56c109afb02a395b797eaa9234856a25e6f96b42d6cd9acf9c1ab82a77
-    linux-64: dad12041c1d0e3120ed245eece61794d75489b1e092329ce6e777b2114bc98d6
+    osx-arm64: 8ea688c2e15053fc85771b63ed0ebcbfb8acaf6743da0b79b682f5ef6771d820
+    linux-64: 5d582d2404d49b2cf9a0d77428311150888b3a98719837ef330af4762e4597a0
   channels:
   - url: conda-forge
     used_env_vars: []
   platforms:
-  - osx-arm64
   - linux-64
+  - osx-arm64
   sources:
   - environment.yml
 package:
@@ -6477,33 +6477,33 @@ package:
   category: main
   optional: false
 - name: nbconvert
-  version: 7.16.6
+  version: 7.17.1
   manager: conda
   platform: linux-64
   dependencies:
-    nbconvert-core: ==7.16.6
-    nbconvert-pandoc: ==7.16.6
-  url: https://conda.anaconda.org/conda-forge/noarch/nbconvert-7.16.6-hc388f54_1.conda
+    nbconvert-core: ==7.17.1
+    nbconvert-pandoc: ==7.17.1
+  url: https://conda.anaconda.org/conda-forge/noarch/nbconvert-7.17.1-hb502eef_0.conda
   hash:
-    md5: 0b26dff819ba9cfb0f6ff9c8b6a53c19
-    sha256: e151c45e9ad2b0368fe64f51b6c857873681df27da3c408a811e85551e129d0e
+    md5: 02669c36935d23e5258c5dd1a5e601ab
+    sha256: 6b6d96cca8e9dd34e0735b59534831e1f8206b7366c79c71e08da6ee55c50683
   category: main
   optional: false
 - name: nbconvert
-  version: 7.16.6
+  version: 7.17.1
   manager: conda
   platform: osx-arm64
   dependencies:
-    nbconvert-core: ==7.16.6
-    nbconvert-pandoc: ==7.16.6
-  url: https://conda.anaconda.org/conda-forge/noarch/nbconvert-7.16.6-hc388f54_1.conda
+    nbconvert-core: ==7.17.1
+    nbconvert-pandoc: ==7.17.1
+  url: https://conda.anaconda.org/conda-forge/noarch/nbconvert-7.17.1-hb502eef_0.conda
   hash:
-    md5: 0b26dff819ba9cfb0f6ff9c8b6a53c19
-    sha256: e151c45e9ad2b0368fe64f51b6c857873681df27da3c408a811e85551e129d0e
+    md5: 02669c36935d23e5258c5dd1a5e601ab
+    sha256: 6b6d96cca8e9dd34e0735b59534831e1f8206b7366c79c71e08da6ee55c50683
   category: main
   optional: false
 - name: nbconvert-core
-  version: 7.16.6
+  version: 7.17.1
   manager: conda
   platform: linux-64
   dependencies:
@@ -6523,14 +6523,14 @@ package:
     pygments: '>=2.4.1'
     python: ''
     traitlets: '>=5.1'
-  url: https://conda.anaconda.org/conda-forge/noarch/nbconvert-core-7.16.6-pyhcf101f3_1.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/nbconvert-core-7.17.1-pyhcf101f3_0.conda
   hash:
-    md5: cfc86ccc3b1de35d36ccaae4c50391f5
-    sha256: 8f575e5c042b17f4677179a6ba474bdbe76573936d3d3e2aeb42b511b9cb1f3f
+    md5: 2bce0d047658a91b99441390b9b27045
+    sha256: ab2ac79c5892c5434d50b3542d96645bdaa06d025b6e03734be29200de248ac2
   category: main
   optional: false
 - name: nbconvert-core
-  version: 7.16.6
+  version: 7.17.1
   manager: conda
   platform: osx-arm64
   dependencies:
@@ -6550,36 +6550,36 @@ package:
     pygments: '>=2.4.1'
     python: ''
     traitlets: '>=5.1'
-  url: https://conda.anaconda.org/conda-forge/noarch/nbconvert-core-7.16.6-pyhcf101f3_1.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/nbconvert-core-7.17.1-pyhcf101f3_0.conda
   hash:
-    md5: cfc86ccc3b1de35d36ccaae4c50391f5
-    sha256: 8f575e5c042b17f4677179a6ba474bdbe76573936d3d3e2aeb42b511b9cb1f3f
+    md5: 2bce0d047658a91b99441390b9b27045
+    sha256: ab2ac79c5892c5434d50b3542d96645bdaa06d025b6e03734be29200de248ac2
   category: main
   optional: false
 - name: nbconvert-pandoc
-  version: 7.16.6
+  version: 7.17.1
   manager: conda
   platform: linux-64
   dependencies:
-    nbconvert-core: ==7.16.6
+    nbconvert-core: ==7.17.1
     pandoc: ''
-  url: https://conda.anaconda.org/conda-forge/noarch/nbconvert-pandoc-7.16.6-h7d6f222_1.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/nbconvert-pandoc-7.17.1-h08b4883_0.conda
   hash:
-    md5: 32b4a67e7fde3b22287b65838c8ad01b
-    sha256: 1eaf769838863544a0f2d2fb05acba1211a764b64234b53b2da836015d661150
+    md5: f635af333701d2ed89d70ba9adb8e2ee
+    sha256: b576268b5b3da13b703a15d28d218fd1b552511726253575025930091e6206ae
   category: main
   optional: false
 - name: nbconvert-pandoc
-  version: 7.16.6
+  version: 7.17.1
   manager: conda
   platform: osx-arm64
   dependencies:
-    nbconvert-core: ==7.16.6
+    nbconvert-core: ==7.17.1
     pandoc: ''
-  url: https://conda.anaconda.org/conda-forge/noarch/nbconvert-pandoc-7.16.6-h7d6f222_1.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/nbconvert-pandoc-7.17.1-h08b4883_0.conda
   hash:
-    md5: 32b4a67e7fde3b22287b65838c8ad01b
-    sha256: 1eaf769838863544a0f2d2fb05acba1211a764b64234b53b2da836015d661150
+    md5: f635af333701d2ed89d70ba9adb8e2ee
+    sha256: b576268b5b3da13b703a15d28d218fd1b552511726253575025930091e6206ae
   category: main
   optional: false
 - name: nbformat
