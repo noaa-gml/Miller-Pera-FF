@@ -1,6 +1,6 @@
 # Miller-Pera FF — Global Fossil-Fuel CO₂ Emissions
 
-[![CI](https://github.com/noaa-gml/miller-ff/actions/workflows/ci.yml/badge.svg)](https://github.com/noaa-gml/miller-ff/actions/workflows/ci.yml)
+[![CI](https://github.com/noaa-gml/Miller-Pera-FF/actions/workflows/ci.yml/badge.svg)](https://github.com/noaa-gml/Miller-Pera-FF/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-NOAA-blue)](LICENSE.md)
 [![DOI](https://img.shields.io/badge/DOI-10.15138%2FJ2Y9--VC32-blue)](https://doi.org/10.15138/J2Y9-VC32)
 
@@ -255,7 +255,7 @@ miller-ff/
 
 # Production Pipeline Reference
 
-Detailed documentation for each pipeline step. The code lives at <https://github.com/noaa-gml/miller-ff>.
+Detailed documentation for each pipeline step. The code lives at <https://github.com/noaa-gml/Miller-Pera-FF>.
 
 ## HPC / Delivered Output Directory
 

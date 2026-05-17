@@ -22,7 +22,7 @@ from pathlib import Path
 
 import config
 
-PIPELINE_URL = "https://github.com/noaa-gml/miller-ff"
+PIPELINE_URL = "https://github.com/noaa-gml/Miller-Pera-FF"
 
 # Packages whose versions are recorded in every output file.
 _TRACKED_PACKAGES = (
