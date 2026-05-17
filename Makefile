@@ -18,6 +18,11 @@ METHOD ?= assumed
 
 .DEFAULT_GOAL := help
 
+# The pipeline stages have a strict order (carbon-monitor -> ingest -> build
+# -> compare). Forbid concurrent target execution so `make -j v2026b` can't
+# race the stages and produce a silently-wrong output.
+.NOTPARALLEL:
+
 .PHONY: help
 help:  ## List available targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "} {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -32,9 +37,9 @@ lock:  ## Regenerate conda-lock.yml from environment.yml (needs conda-lock)
 # ── quality gates (mirror .github/workflows/ci.yml) ──────────────────────
 .PHONY: lint typecheck test check
 lint:  ## Lint with ruff
-	ruff check
+	$(PYTHON) -m ruff check
 typecheck:  ## Type-check with mypy
-	mypy .
+	$(PYTHON) -m mypy .
 test:  ## Run the pytest suite
 	$(PYTHON) -m pytest
 check: lint typecheck test  ## Run all three gates: ruff + mypy + pytest
@@ -62,7 +67,7 @@ cm_yearly:  ## Build the 'cm_yearly'-method outputs
 compare:  ## Generate the v2026b method-comparison report
 	$(PYTHON) compare_methods.py
 verify:  ## Execute the verify_nrt.ipynb quality-check notebook
-	jupyter nbconvert --to notebook --execute --inplace verify_nrt.ipynb
+	$(PYTHON) -m jupyter nbconvert --to notebook --execute --inplace verify_nrt.ipynb
 
 # ── full pipeline ────────────────────────────────────────────────────────
 .PHONY: v2026b
