@@ -1,5 +1,9 @@
 # Miller-Pera FF — Global Fossil-Fuel CO₂ Emissions
 
+[![CI](https://github.com/noaa-gml/miller-ff/actions/workflows/ci.yml/badge.svg)](https://github.com/noaa-gml/miller-ff/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-NOAA-blue)](LICENSE.md)
+[![DOI](https://img.shields.io/badge/DOI-10.15138%2FJ2Y9--VC32-blue)](https://doi.org/10.15138/J2Y9-VC32)
+
 Gridded 1° × 1° monthly fossil-fuel CO₂ emission estimates (1993–2025) for use as prior fluxes in atmospheric inversions (CarbonTracker, TM5-4DVar) in the NOAA GML.
 
 Combines national inventories (**CDIAC**, **Energy Institute**, **USGS cement**) with **EDGAR** spatial patterns to produce a global, monthly, sector-resolved product.
