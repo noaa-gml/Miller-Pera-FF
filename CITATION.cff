@@ -10,8 +10,8 @@ abstract: >-
   Energy Institute, and USGS are combined with EDGAR spatial patterns and,
   for the near-real-time extension, CarbonMonitor daily emissions.
 type: software
-version: 1.0.0
-date-released: "2026-05-16"
+version: 1.0.1
+date-released: "2026-06-08"
 repository-code: "https://github.com/noaa-gml/Miller-Pera-FF"
 url: "https://github.com/noaa-gml/Miller-Pera-FF"
 license-url: "https://github.com/noaa-gml/Miller-Pera-FF/blob/main/LICENSE.md"

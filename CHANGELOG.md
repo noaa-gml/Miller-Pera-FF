@@ -11,6 +11,28 @@ This project loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ---
 
+## [1.0.1] — 2026-06-08 — security patch + Makefile hardening
+
+Software-only patch released between data revisions. The **data product is
+unchanged** (`PRODUCT_VERSION = "2026b"`); outputs for the same inputs are
+byte-identical (`nbconvert` is not in `provenance._TRACKED_PACKAGES`).
+
+### Tooling
+
+- **Security:** bumped `nbconvert` 7.16.6 → 7.17.1 to clear three advisories
+  flagged on the first push to GitHub: CVE-2025-53000 (HIGH, Windows code
+  execution via uncontrolled search path), CVE-2026-39377 / CVE-2026-39378
+  (MODERATE, path-traversal arbitrary file write / read). Updated in
+  `environment.yml`, `requirements.txt`, and `conda-lock.yml`; the `p312`
+  env updated to match.
+- **Makefile:** added `.NOTPARALLEL` so `make -j v2026b` can't race the
+  strictly-ordered pipeline stages and produce a silently-wrong output;
+  routed `lint` / `typecheck` / `verify` through `$(PYTHON) -m` so the
+  documented `make PYTHON="conda run -n p312 python" check` override reaches
+  every gate, not just `test`.
+
+---
+
 ## [2026b] — May 2026 — near-real-time extension through April 2026
 
 Near-real-time companion to the frozen `2026` product, produced so NOAA GML
