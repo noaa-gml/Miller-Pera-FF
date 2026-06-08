@@ -11,7 +11,7 @@ target-version = "py312"
 # Notebooks are exempt from the default scan — they contain a lot of research-style
 # code that hasn't been linted. To clean one up explicitly:
 #     ruff check --fix verify.ipynb
-extend-exclude = ["archive", "__pycache__", ".venv", "delivery", "*.ipynb"]
+extend-exclude = ["archive", "__pycache__", ".venv", "delivery", "delivery_orion", "*.ipynb"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -128,6 +128,7 @@ python_version = "3.12"
 exclude = [
     "archive/",
     "delivery/",
+    "delivery_orion/",
     "__pycache__/",
     ".venv/",
 ]
