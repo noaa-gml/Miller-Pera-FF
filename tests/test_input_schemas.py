@@ -162,7 +162,12 @@ def test_edgar_sector_dirs_exist(sector: str):
     p = INPUTS / f"{sector}_flx_nc_2025_GHG"
     _skip_if_missing(p)
     files = sorted(p.glob("*.nc"))
-    assert files, f"EDGAR {sector} dir empty"
+    if not files:
+        # The dir is kept in git via its tracked `_readme.html`, but the
+        # bulk `*.nc` files are gitignored — so in CI / fresh checkouts the
+        # dir exists but contains no netCDFs. Skip rather than fail (same
+        # pattern as the CarbonMonitor CSV test above).
+        pytest.skip(f"no .nc files in {p} (data not present)")
     # Should have at least one real file
     real = [f for f in files if "FAKE" not in f.name]
     assert real, f"EDGAR {sector} has only FAKE files"
