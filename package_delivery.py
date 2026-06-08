@@ -6,10 +6,22 @@ delivery directory is a *build artefact*: this script wipes it and rebuilds
 it from the canonical source files, so it can never silently drift from the
 repo.
 
+Two output layouts:
+
+* **Bundle** (default) — the citable archive layout, with docs, full source
+  under ``code/``, and (optionally) outputs under ``outputs/``. Suitable for
+  GitHub Releases / Zenodo / DOI archives.
+
+* **Orion-flat** (``--orion-flat``) — the CarbonTracker drop-zone layout
+  matching the ``/work2/noaa/co2/input/FF/Miller/<YYYYMMDD>/`` precedent:
+  flat directory, no ``code/``, CT filenames stripped of their method
+  suffix so consumer scripts read the same names release-to-release.
+
 Bundle layout::
 
     <outdir>/
     ├── README.md  methodology.html  landing_page.html  summary_figure.png
+    ├── CHANGELOG.md  CITATION.cff  LICENSE.md
     ├── code/
     │   ├── *.py  pyproject.toml  verify_*.ipynb
     │   ├── inputs/   (country_aliases.json, canonical_countries.csv)
@@ -19,11 +31,23 @@ Bundle layout::
         ├── ct/flux1x1_ff_<method>.*.nc
         └── verify_report.html, v2026b_method_comparison.{md,png}
 
+Orion-flat layout (always requires --method)::
+
+    <outdir>/
+    ├── README.md  CHANGELOG.md  split_ct.py
+    ├── flux1x1_ff.YYYY.nc       (per-year, full years only)
+    ├── flux1x1_ff.YYYYMM.nc     (per-month, includes partial-year tail)
+    ├── v2026b_method_comparison.{md,png}
+    └── from_ash/
+        └── gml_ff_co2_2026b_<method>.nc
+
 Usage::
 
     python package_delivery.py                              # code + docs only
     python package_delivery.py --with-outputs --method assumed
     python package_delivery.py --with-outputs --method cm_yearly --zip
+    python package_delivery.py --orion-flat --method assumed
+    python package_delivery.py --orion-flat --method assumed --outdir delivery/20260608
 """
 
 from __future__ import annotations
@@ -77,6 +101,11 @@ OUTPUT_EXTRAS = [
     "v2026b_method_comparison.md",
     "v2026b_method_comparison.png",
 ]
+
+# ── Orion-flat layout ────────────────────────────────────────────────────────
+# Lean: GitHub is the canonical source for everything else.
+ORION_FLAT_DOCS = ["README.md", "CHANGELOG.md"]
+ORION_FLAT_REPORTS = ["v2026b_method_comparison.md", "v2026b_method_comparison.png"]
 
 
 def _copy(src: Path, dst: Path) -> None:
@@ -143,8 +172,95 @@ def _copy_outputs(outdir: Path, method: str) -> list[str]:
     return copied
 
 
-def build(outdir: Path, method: str | None, *, with_outputs: bool, make_zip: bool) -> int:
-    """Assemble the bundle. Returns a process exit code."""
+def _copy_orion_flat(outdir: Path, method: str) -> list[str]:
+    """Copy the chosen method's outputs in the CarbonTracker drop-zone layout.
+
+    Differences vs the bundle layout:
+      * Flat — no ``code/`` or ``outputs/`` subdirs.
+      * ``flux1x1_ff_<method>.*.nc`` is renamed to ``flux1x1_ff.*.nc``, so
+        consumers reading ``<Miller>/<dropdate>/flux1x1_ff.*.nc`` see the
+        same names release-to-release.
+      * Only the producing script (``split_ct.py``), README, CHANGELOG, and
+        the method-comparison report ship as docs; the full source lives in
+        the GitHub repo, not in the drop-zone.
+      * The monolithic source goes to ``from_ash/`` (matches the 20260225
+        precedent and keeps its method tag — it IS the per-method source).
+    """
+    copied: list[str] = []
+    out_src = REPO / "outputs"
+
+    # Docs at the top level.
+    for name in ORION_FLAT_DOCS:
+        _copy(REPO / name, outdir / name)
+        copied.append(name)
+
+    # The script that produced the CT files.
+    _copy(REPO / "split_ct.py", outdir / "split_ct.py")
+    copied.append("split_ct.py")
+
+    # CT-format outputs flattened to top level, method suffix stripped.
+    ct_files = sorted((out_src / "ct").glob(f"flux1x1_ff_{method}.*.nc"))
+    if not ct_files:
+        raise FileNotFoundError(
+            f"no outputs/ct/flux1x1_ff_{method}.*.nc files — "
+            f"run post_process.py --method {method} first",
+        )
+    src_prefix = f"flux1x1_ff_{method}."
+    dst_prefix = "flux1x1_ff."
+    for src in ct_files:
+        new_name = src.name.replace(src_prefix, dst_prefix, 1)
+        if new_name == src.name:  # defensive: glob should guarantee a hit
+            raise ValueError(
+                f"unexpected filename pattern (no '{src_prefix}'): {src.name}",
+            )
+        _copy(src, outdir / new_name)
+    copied.append(
+        f"flux1x1_ff.*.nc ({len(ct_files)} CarbonTracker files, "
+        f"method tag stripped)",
+    )
+
+    # Method-comparison report so the alternative is on record.
+    for name in ORION_FLAT_REPORTS:
+        p = out_src / name
+        if p.exists():
+            _copy(p, outdir / name)
+            copied.append(name)
+        else:
+            print(f"  note: optional {name} not present — skipping")
+
+    # Monolithic source in from_ash/ — keeps the method tag (it IS the
+    # per-method source, distinct from the CT-format derivatives).
+    mono = out_src / f"gml_ff_co2_2026b_{method}.nc"
+    if not mono.exists():
+        raise FileNotFoundError(
+            f"{mono} not found — run ff_country.py + post_process.py "
+            f"--method {method} first",
+        )
+    _copy(mono, outdir / "from_ash" / mono.name)
+    copied.append(f"from_ash/{mono.name}")
+
+    return copied
+
+
+def build(
+    outdir: Path,
+    method: str | None,
+    *,
+    with_outputs: bool,
+    make_zip: bool,
+    orion_flat: bool = False,
+) -> int:
+    """Assemble the bundle (or Orion-flat layout). Returns a process exit code."""
+    if orion_flat and with_outputs:
+        print(
+            "ERROR: --orion-flat is its own layout; "
+            "do not combine with --with-outputs",
+            file=sys.stderr,
+        )
+        return 2
+    if orion_flat and method is None:
+        print("ERROR: --orion-flat requires --method", file=sys.stderr)
+        return 2
     if with_outputs and method is None:
         print("ERROR: --with-outputs requires --method", file=sys.stderr)
         return 2
@@ -156,22 +272,29 @@ def build(outdir: Path, method: str | None, *, with_outputs: bool, make_zip: boo
 
     copied: list[str] = []
 
-    print("Copying docs ...")
-    for name in DOC_FILES:
-        _copy(REPO / name, outdir / name)
-        copied.append(name)
-
-    print("Copying code ...")
-    copied += _copy_code(outdir)
-
-    if with_outputs:
+    if orion_flat:
         assert method is not None  # guarded above
-        print(f"Copying outputs (method={method}) ...")
-        copied += _copy_outputs(outdir, method)
+        print(f"Assembling Orion-flat delivery (method={method}) ...")
+        copied += _copy_orion_flat(outdir, method)
+        layout_name = "Orion-flat delivery"
     else:
-        print("Skipping outputs (pass --with-outputs --method <m> to include).")
+        print("Copying docs ...")
+        for name in DOC_FILES:
+            _copy(REPO / name, outdir / name)
+            copied.append(name)
 
-    print(f"\nBundle assembled at {outdir}/  ({len(copied)} items):")
+        print("Copying code ...")
+        copied += _copy_code(outdir)
+
+        if with_outputs:
+            assert method is not None  # guarded above
+            print(f"Copying outputs (method={method}) ...")
+            copied += _copy_outputs(outdir, method)
+        else:
+            print("Skipping outputs (pass --with-outputs --method <m> to include).")
+        layout_name = "Bundle"
+
+    print(f"\n{layout_name} assembled at {outdir}/  ({len(copied)} items):")
     for item in copied:
         print(f"  {item}")
 
@@ -188,24 +311,45 @@ def build(outdir: Path, method: str | None, *, with_outputs: bool, make_zip: boo
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     parser.add_argument(
-        "--outdir", type=Path, default=REPO / "delivery",
-        help="Bundle output directory (default: delivery/). Wiped + rebuilt.",
+        "--outdir", type=Path, default=None,
+        help=(
+            "Output directory. Wiped + rebuilt. "
+            "Default: delivery/ (or delivery_orion/ with --orion-flat)."
+        ),
     )
     parser.add_argument(
         "--method", choices=METHODS, default=None,
-        help="Which v2026b output set to include (required with --with-outputs).",
+        help=(
+            "Which v2026b output set to include "
+            "(required with --with-outputs or --orion-flat)."
+        ),
     )
     parser.add_argument(
         "--with-outputs", action="store_true",
         help="Also copy the (large) NetCDF outputs for the chosen --method.",
     )
     parser.add_argument(
+        "--orion-flat", action="store_true", dest="orion_flat",
+        help=(
+            "Build the flat Orion drop-zone layout instead of the bundle. "
+            "Implies a single chosen --method; strips the method suffix "
+            "from CT filenames so the layout matches "
+            "/work2/.../Miller/<dropdate>/. "
+            "Mutually exclusive with --with-outputs."
+        ),
+    )
+    parser.add_argument(
         "--zip", action="store_true", dest="make_zip",
         help="Zip the bundle when done.",
     )
     args = parser.parse_args(argv)
-    return build(args.outdir, args.method,
-                 with_outputs=args.with_outputs, make_zip=args.make_zip)
+    default_subdir = "delivery_orion" if args.orion_flat else "delivery"
+    outdir = args.outdir if args.outdir is not None else REPO / default_subdir
+    return build(
+        outdir, args.method,
+        with_outputs=args.with_outputs, make_zip=args.make_zip,
+        orion_flat=args.orion_flat,
+    )
 
 
 if __name__ == "__main__":

@@ -75,9 +75,11 @@ v2026b: carbon-monitor ingest assumed cm_yearly compare  ## Full v2026b pipeline
 	@echo "v2026b pipeline complete. Run 'make verify' for the QA notebook."
 
 # ── delivery bundle ──────────────────────────────────────────────────────
-.PHONY: delivery
+.PHONY: delivery delivery-orion
 delivery:  ## Build the delivery/ bundle with outputs (METHOD=assumed|cm_yearly)
 	$(PYTHON) package_delivery.py --with-outputs --method $(METHOD)
+delivery-orion:  ## Build the flat Orion drop-zone layout (METHOD=assumed|cm_yearly)
+	$(PYTHON) package_delivery.py --orion-flat --method $(METHOD)
 
 # ── housekeeping ─────────────────────────────────────────────────────────
 .PHONY: clean
