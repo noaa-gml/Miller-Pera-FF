@@ -855,14 +855,15 @@ def main(method: CMMethod = "assumed") -> None:
     * ``"assumed"`` — same as 2025: gas/oil +2.5%, coal/flaring +1%,
       cement flat (USGS hasn't published 2026 yet). The current default
       and what we already validated for 2025.
-    * ``"cm_yearly"`` — per-country ``sum(CM[Q1 2026]) / sum(CM[Q1 2025])``
+    * ``"cm_yearly"`` — per-country year-to-date ratio
+      ``sum(CM[available 2026 months]) / sum(CM[same 2025 months])``
       applied uniformly across all five sectors. Countries not directly
       tracked by CM use the ROW row (already pre-filled in ingest).
 
-    After PIQS interpolation and the seasonal cycle, ``Jan 2026`` is left
-    as-is and Feb..Apr 2026 are overwritten with
-    ``Jan_2026 × CM_monthly_ratio`` (per country, with ROW fallback;
-    ocean / bunker cells use the WORLD ratio).
+    After PIQS interpolation and the seasonal cycle, Feb..Apr 2026 are
+    overwritten per cell with ``prior_year_same_month × CM YoY ratio``
+    (per country, with ROW fallback; ocean / bunker cells use the WORLD
+    ratio).
     """
     if method not in CM_METHODS:
         raise ValueError(f"Unknown method {method!r}; expected one of {CM_METHODS}")
@@ -915,7 +916,7 @@ def main(method: CMMethod = "assumed") -> None:
     #         — this is what we already validated for the v2026 frozen product.
     #   2026: depends on the chosen method:
     #           "assumed"   → same rates compounded one more year
-    #           "cm_yearly" → per-country CM Q1-2026/Q1-2025 ratio applied
+    #           "cm_yearly" → per-country CM year-to-date ratio applied
     #                          uniformly to all four fuels (matching the IDL
     #                          semantics — CM doesn't break down by fuel type)
     _assumed = {"gas": 1.025, "oil": 1.025, "coal": 1.01, "flaring": 1.01}
@@ -1037,7 +1038,7 @@ if __name__ == "__main__":
         "--method", choices=CM_METHODS, default="assumed",
         help=("2025→2026 annual baseline. 'assumed' compounds the same "
               "growth rates we used for 2025; 'cm_yearly' uses CM's "
-              "Q1-2026/Q1-2025 per-country ratio uniformly. The Feb..Apr "
+              "year-to-date per-country ratio uniformly. The Feb..Apr "
               "2026 monthly overwrite is the same in both cases."),
     )
     main(method=parser.parse_args().method)

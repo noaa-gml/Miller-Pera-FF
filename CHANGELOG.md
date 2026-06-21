@@ -14,8 +14,9 @@ This project loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [1.0.1] — 2026-06-08 — security patch + Makefile hardening
 
 Software-only patch released between data revisions. The **data product is
-unchanged** (`PRODUCT_VERSION = "2026b"`); outputs for the same inputs are
-byte-identical (`nbconvert` is not in `provenance._TRACKED_PACKAGES`).
+unchanged** (`PRODUCT_VERSION = "2026b"`); the recorded provenance for the
+same inputs is identical (`nbconvert` is not in
+`provenance._TRACKED_PACKAGES`).
 
 ### Tooling
 
@@ -49,9 +50,11 @@ inversion runs can reach into 2026 before the next Energy Institute release
   files (`_assumed` and `_cm_yearly`) so the choice can be made at delivery:
   - `assumed` — gas/oil +2.5%, coal/flaring +1% per fuel (the `2026` rates
     carried forward one year).
-  - `cm_yearly` — per-country CarbonMonitor Q1-2026/Q1-2025 ratio applied
-    uniformly across all five sectors.
-  The two agree within ~0.25% annually; see
+  - `cm_yearly` — per-country CarbonMonitor year-to-date ratio (sum of
+    available 2026 months / same 2025 months) applied uniformly across all
+    five sectors.
+  The two agree to within ~0.03% on annual totals (spatial rel-RMS
+  typically ~0.25%, up to ~0.9% in the most recent month); see
   `outputs/v2026b_method_comparison.{md,png}`.
 - Feb–Apr 2026 are overwritten per grid cell with
   `prior_year_same_month × CarbonMonitor_YoY_ratio` (ROW fallback for
@@ -72,6 +75,12 @@ inversion runs can reach into 2026 before the next Energy Institute release
   seasonality on non-seasonal regions).
 - **`post_process.py`** / **`split_ct.py`** — partial-year aware;
   `--method`-tagged output filenames; `v2026b_annual_method` global attribute.
+  **Note for downstream consumers:** the CarbonTracker per-month/per-year
+  files now carry only `fossil_imp` (+ coordinate/date bounds) as **float32**.
+  Earlier deliveries (e.g. 20260225) were larger (~573 KB vs ~233 KB per
+  month) because they were float64 and/or carried diagnostic variables
+  (`fossil_imp_cell`, `cell_areas`); these are intentionally dropped here.
+  The size reduction is a dtype + variable change, not merely compression.
 - **`compare_methods.py`** — new: side-by-side comparison report
   (markdown + 2×2 figure).
 - **`verify_nrt.ipynb`** — new: 3 partial-year-aware checks (structure,

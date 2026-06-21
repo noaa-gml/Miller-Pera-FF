@@ -831,10 +831,14 @@ def main() -> None:
     # ─────────────────────────────────────────────────────────────────────────
     # 7b. CarbonMonitor near-real-time monthly data (for v2026b NRT extension)
     # Source: https://carbonmonitor.org/  (download via download_carbon_monitor.py)
-    # Used to fill in Feb..Apr 2026 in the partial-year extension. Two
-    # outputs: a per-country yearly-ratio proxy (Q1 2026 / Q1 2025) for
-    # Method B's annual baseline, and per-country monthly ratios within
-    # 2026 (each month / Jan 2026) for the within-year shape.
+    # Used to fill in Feb..Apr 2026 in the partial-year extension. Outputs:
+    #   - a per-country year-to-date ratio proxy (sum of available 2026
+    #     months / same 2025 months) for the cm_yearly annual baseline;
+    #   - per-country year-over-year ratios (CM[2026-MM] / CM[2025-MM]) that
+    #     drive the per-cell Feb..Apr 2026 overwrite in ff_country.py;
+    #   - per-country intra-year ratios (each month / Jan) written for
+    #     diagnostics only — retained from the superseded Jan-anchored
+    #     overwrite and no longer consumed by the pipeline.
     # ─────────────────────────────────────────────────────────────────────────
     print("7b. CarbonMonitor (NRT for v2026b extension) ...")
     cm_canonical = CDIAC_countries.tolist()

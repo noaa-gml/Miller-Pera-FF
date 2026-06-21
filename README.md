@@ -150,9 +150,9 @@ v2026b has two components:
 
 1. **Annual baseline for 2025 → 2026.** Two methods are produced for comparison; both are valid choices.
    * `assumed` — same per-fuel rates we used for 2025 (gas/oil +2.5%, coal/flaring +1%, cement flat — USGS hasn't published 2026 yet) compounded one more year. Default and most consistent with the 2025 methodology.
-   * `cm_yearly` — per-country CM Q1-2026 / Q1-2025 ratio applied uniformly across all five sectors (CM doesn't break down by fuel type). Countries not directly tracked use the `ROW` row.
+   * `cm_yearly` — per-country CM year-to-date ratio (sum of available 2026 months / same 2025 months) applied uniformly across all five sectors (CM doesn't break down by fuel type). Countries not directly tracked use the `ROW` row.
 
-   Both methods are written to disk as separate NetCDFs (`gml_ff_co2_2026b_assumed.nc` and `gml_ff_co2_2026b_cm_yearly.nc`); the choice is made at delivery time. Annual difference is ~0.25%; per-month differences ~0.5–1% in 2026.
+   Both methods are written to disk as separate NetCDFs (`gml_ff_co2_2026b_assumed.nc` and `gml_ff_co2_2026b_cm_yearly.nc`); the choice is made at delivery time. Annual totals agree within ~0.03%; per-month 2026 totals within ~0.5%; spatial rel-RMS typically ~0.25% (up to ~0.9% in the most recent month).
 
 2. **Monthly NRT overwrite for Feb–Apr 2026.** After the PIQS spline and seasonal cycle run as usual, months for which CM has both prior-year and current-year data are overwritten **per cell**:
 
@@ -187,12 +187,12 @@ USGS cement ──────┘   (189 countries)     1°×1° grid          v
 | 2 | `ff_country.py` | Assign national emissions to grid cells, extrapolate, apply seasonal cycles |
 | 3 | `post_process.py` | Convert Gg C → mol/m²/s, write per-year + monolithic netCDFs, call `split_ct.py` |
 | 3b | `split_ct.py` | Reformat to CarbonTracker conventions (auto-called by step 3) |
-| 4 | `verify_nrt.ipynb` | 90+ automated quality checks across 11 sections |
+| 4 | `verify.ipynb` / `verify_nrt.ipynb` | `verify.ipynb`: 90+ automated quality checks across 11 sections; `verify_nrt.ipynb`: the v2026b partial-year NRT checks |
 
 <details>
 <summary><strong>Verification checks (90+ in 11 sections)</strong></summary>
 
-The verification notebook (`verify_nrt.ipynb`) runs 90+ checks organised into two parts:
+The verification notebook (`verify.ipynb`) runs 90+ checks organised into two parts:
 
 **Part I — Input Data Integrity (Sections 1–4)**
 
@@ -322,8 +322,8 @@ python ingest.py
 ```
 
 **Inputs read:**
-- `inputs/CDIAC/global.1751_2021.xlsx` — global totals
-- `inputs/CDIAC/nation.1751_2021.xlsx` — national totals
+- `inputs/CDIAC/global.1750_2022.xlsx` — global totals
+- `inputs/CDIAC/nation.1750_2022.xlsx` — national totals
 - `inputs/EI-Stats-Review-ALL-data-2025.xlsx` — EI oil/gas/coal/flaring
 - `inputs/TOTALS_flx_nc_2025_GHG/*.nc` — EDGAR gridded fluxes (all sectors combined)
 - `inputs/NMM_flx_nc_2025_GHG/*.nc` — EDGAR NMM sector (cement spatial pattern)
@@ -358,7 +358,7 @@ python ff_country.py
 
 - **Key parameters** (configured near top of `main()`):
   - `yr_start = 1993` — first year
-  - `yr_cdiac = 2021` — last CDIAC year
+  - `yr_cdiac = 2022` — last CDIAC year (`LAST_CDIAC_YEAR` in `config.py`)
   - `yr_ei = 2024` — last EI year
   - `yr_final = 2025` — final extrapolation year
   - Seasonal cycles: N. America ("nam") and Eurasia ("euras")
@@ -418,7 +418,7 @@ Comparison checks are in `verify_nrt.ipynb` (Check 6e).
 
 ## Step 4: Verify
 
-**`verify_nrt.ipynb`** — 90+ checks in 11 sections, split into two parts:
+**`verify.ipynb`** — 90+ checks in 11 sections, split into two parts (the v2026b partial-year NRT checks live in the companion `verify_nrt.ipynb`):
 
 **Part I — Input Data Integrity (Sections 1–4)**
 

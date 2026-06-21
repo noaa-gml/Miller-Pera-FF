@@ -101,8 +101,8 @@ def test_cm_yearly_proxy_ratio_sane():
 
 
 def test_cm_world_yearly_close_to_unity():
-    """WORLD aggregate Q1-2026/Q1-2025 should be within 5% of 1 — a global jump
-    larger than that signals a CM data anomaly worth investigating."""
+    """WORLD aggregate year-to-date 2026/2025 ratio should be within 5% of 1 —
+    a global jump larger than that signals a CM data anomaly worth investigating."""
     p = PROC / "CM_yearly_ratio_proxy_2026.csv"
     _skip_if_missing(p)
     df = pd.read_csv(p, index_col=0)

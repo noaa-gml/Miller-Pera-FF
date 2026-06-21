@@ -226,9 +226,9 @@ Gridded 1&deg; &times; 1&deg; monthly fossil-fuel CO&#8322; emission estimates (
   <li><strong>Annual baseline for 2025 &rarr; 2026.</strong> Two methods are produced for comparison; both are valid choices and the difference is small.
     <ul>
       <li><code>assumed</code> &mdash; the same per-fuel rates we used for 2025 (gas/oil +2.5%, coal/flaring +1%, cement flat &mdash; USGS hasn&rsquo;t published 2026 yet) compounded one more year. Default and most consistent with the 2025 methodology.</li>
-      <li><code>cm_yearly</code> &mdash; per-country CM Q1-2026 / Q1-2025 ratio applied uniformly across all five sectors (CM doesn&rsquo;t break down by fuel type). Countries not directly tracked by CM use the ROW row.</li>
+      <li><code>cm_yearly</code> &mdash; per-country CM year-to-date ratio (sum of available 2026 months / same 2025 months) applied uniformly across all five sectors (CM doesn&rsquo;t break down by fuel type). Countries not directly tracked by CM use the ROW row.</li>
     </ul>
-    Both methods are written to disk as separate NetCDFs (<code>gml_ff_co2_2026b_assumed.nc</code> and <code>gml_ff_co2_2026b_cm_yearly.nc</code>) so the choice can be made at delivery time. The annual difference is approximately 0.25%; per-month differences are ~0.5&ndash;1% in 2026, smaller earlier.</li>
+    Both methods are written to disk as separate NetCDFs (<code>gml_ff_co2_2026b_assumed.nc</code> and <code>gml_ff_co2_2026b_cm_yearly.nc</code>) so the choice can be made at delivery time. Annual totals agree within ~0.03%; per-month 2026 totals within ~0.5%; spatial rel-RMS is typically ~0.25% (up to ~0.9% in the most recent month).</li>
 
   <li><strong>Monthly NRT overwrite for Feb&ndash;Apr 2026.</strong> After the PIQS spline and seasonal-cycle steps run as usual, the months for which CM has both prior-year and current-year data are <em>overwritten</em> per cell using:
     <pre style="margin-top:0.6em">    Feb_2026[cell] = Feb_2025[cell] &times; CM_YoY_ratio[country, Feb]

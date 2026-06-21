@@ -30,7 +30,11 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          # Pin the exact patch release the product was built and validated
+          # against (matches environment.yml / conda-lock.yml). A floating
+          # "3.12" would let CI validate on an unintended patch — the one
+          # re-entry point for the ABI/numerical drift the pins guard against.
+          python-version: "3.12.2"
 
       - name: Install dependencies
         # requirements.txt holds the exact pins the product was built and

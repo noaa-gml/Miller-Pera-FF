@@ -3,9 +3,9 @@
 Two annual baselines for the 2025 → 2026 step:
 
 * **assumed**: gas/oil +2.5%, coal/flaring +1% (per-fuel; same as 2025)
-* **cm_yearly**: per-country CM Q1-2026/Q1-2025 ratio applied uniformly across fuels
+* **cm_yearly**: per-country CM year-to-date ratio (sum of available 2026 months / same 2025 months) applied uniformly across fuels
 
-Both methods produce the same Feb..Apr 2026 monthly shape (via `Jan_2026 × CM_monthly_ratio` overwrite).
+Both methods produce the same Feb..Apr 2026 monthly shape (via `prior_year_same_month × CM YoY ratio` per-cell overwrite).
 
 ## Annual totals (PgC) — last 6 years
 
