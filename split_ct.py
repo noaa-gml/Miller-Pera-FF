@@ -2,8 +2,8 @@
 """split_ct.py — Split the monolithic netCDF into CarbonTracker-format files.
 
 Input:   outputs/{OUTPUT_PREFIX}_<method>.nc   (from post_process.py)
-Outputs: outputs/ct/flux1x1_ff_<method>.{YYYY}.nc    (per-year,  12 months each)
-         outputs/ct/flux1x1_ff_<method>.{YYYYMM}.nc  (per-month, 1  month  each)
+Outputs: outputs/ct/flux1x1_ff_<method>.{YYYY}.nc    (per-year; final year may be partial)
+         outputs/ct/flux1x1_ff_<method>.{YYYYMM}.nc  (per-month, 1 month each)
 
 CarbonTracker conventions (matching split.py):
   - time dim named 'date', values are midpoint of each month
@@ -144,6 +144,94 @@ def build_carbontracker_dataset(ds_in: xr.Dataset) -> xr.Dataset:
 # Main
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def write_ct_files(
+    ds_ct: xr.Dataset, ct_dir: str, ct_prefix: str, n_months: int,
+) -> tuple[list[str], list[str]]:
+    """Write per-year + per-month CarbonTracker files to *ct_dir* and validate.
+
+    One per-year file per calendar year present; the final year may be
+    partial (< 12 months — the NRT tail) and still gets a per-year file.
+    Returns ``(yr_files, mon_files)`` as sorted basenames.
+    """
+    os.makedirs(ct_dir, exist_ok=True)
+
+    ct_encoding: dict[str, dict[str, Any]] = {
+        "date": {"units": "days since 1900-01-01", "dtype": "float64"},
+        "calendar_components": {"dtype": "int32"},
+        "date_components": {"dtype": "int32"},
+        VAR_NAME: {"dtype": "float32", "zlib": True, "complevel": 4},
+    }
+
+    print(f"Writing per-year and per-month files to {ct_dir}/ ...")
+
+    n_partial_year_files = 0
+    for year_key, ds_yr in ds_ct.groupby("date.year"):
+        year = int(year_key)
+        n_in_year = int(ds_yr.sizes["date"])
+        # One per-year file for every calendar year present. The final year
+        # may be partial (< 12 months, the NRT tail) — it still gets a
+        # per-year file so consumers see a flux1x1_ff.<year>.nc for it.
+        yr_fname = os.path.join(ct_dir, f"{ct_prefix}.{year}.nc")
+        ds_yr.to_netcdf(yr_fname, encoding=ct_encoding, unlimited_dims=["date"])
+        if n_in_year < 12:
+            n_partial_year_files += 1
+        tag = "" if n_in_year == 12 else f" (partial, {n_in_year} mo)"
+        print(f"  {year}{tag}:", end="")
+
+        for month_key, ds_mon in ds_yr.groupby("date.month"):
+            month = int(month_key)
+            mon_fname = os.path.join(ct_dir, f"{ct_prefix}.{year}{month:02d}.nc")
+            ds_mon.to_netcdf(mon_fname, encoding=ct_encoding, unlimited_dims=["date"])
+            print(f" {month}", end="", flush=True)
+        print()
+
+    # --- output validation ---
+    all_ct = [f for f in os.listdir(ct_dir)
+              if f.startswith(ct_prefix + ".") and f.endswith(".nc")]
+
+    def stem(f: str) -> str:
+        return f.replace(ct_prefix + ".", "").replace(".nc", "")
+
+    yr_files = sorted(f for f in all_ct if len(stem(f)) == 4 and stem(f).isdigit())
+    mon_files = sorted(f for f in all_ct if len(stem(f)) == 6 and stem(f).isdigit())
+
+    n_full_years = n_months // 12
+    has_partial = (n_months % 12) != 0
+    expected_yr_files = n_full_years + (1 if has_partial else 0)
+    assert len(mon_files) == n_months, (
+        f"Expected {n_months} per-month files, found {len(mon_files)}")
+    # One per-year file per calendar year present (final year may be partial).
+    assert len(yr_files) == expected_yr_files, (
+        f"Expected {expected_yr_files} per-year files "
+        f"({n_full_years} full + {int(has_partial)} partial), "
+        f"found {len(yr_files)}")
+
+    # spot-check: months per year-file sum to n_months, each in [1, 12], and
+    # at most one partial (< 12) year — the NRT tail.
+    total_yr_months = 0
+    n_partial_seen = 0
+    for yf in yr_files:
+        ds_check = xr.open_dataset(os.path.join(ct_dir, yf))
+        n = int(ds_check.sizes["date"])
+        ds_check.close()
+        assert 1 <= n <= 12, f"{yf}: expected 1..12 months, got {n}"
+        total_yr_months += n
+        if n < 12:
+            n_partial_seen += 1
+    assert total_yr_months == n_months, (
+        f"per-year files cover {total_yr_months} months, expected {n_months}")
+    assert n_partial_seen == (1 if has_partial else 0), (
+        f"expected {int(has_partial)} partial per-year file, found {n_partial_seen}")
+
+    print(f"\nDone. CarbonTracker-format files written to {ct_dir}/")
+    print(f"  {len(yr_files)} per-year files "
+          f"({n_full_years} full + {n_partial_year_files} partial), "
+          f"{len(mon_files)} per-month files")
+    print(f"  Pattern: {ct_prefix}.YYYY.nc  and  {ct_prefix}.YYYYMM.nc")
+
+    return yr_files, mon_files
+
+
 def main(method: CMMethod = "assumed") -> None:
     if method not in CM_METHODS:
         raise ValueError(f"Unknown method {method!r}; expected one of {CM_METHODS}")
@@ -178,67 +266,7 @@ def main(method: CMMethod = "assumed") -> None:
     # propagates to every per-year / per-month CT file sliced from ds_ct.
     ds_ct.attrs.update(provenance_attrs(method=method))
 
-    os.makedirs(CT_DIR, exist_ok=True)
-
-    ct_encoding: dict[str, dict[str, Any]] = {
-        "date": {"units": "days since 1900-01-01", "dtype": "float64"},
-        "calendar_components": {"dtype": "int32"},
-        "date_components": {"dtype": "int32"},
-        VAR_NAME: {"dtype": "float32", "zlib": True, "complevel": 4},
-    }
-
-    print(f"Writing per-year and per-month files to {CT_DIR}/ ...")
-
-    n_partial_year_files = 0
-    for year_key, ds_yr in ds_ct.groupby("date.year"):
-        year = int(year_key)
-        n_in_year = int(ds_yr.sizes["date"])
-        # Per-year file: only write for FULL years (12 months). Partial last
-        # year is delivered via per-month files only.
-        if n_in_year == 12:
-            yr_fname = os.path.join(CT_DIR, f"{ct_prefix}.{year}.nc")
-            ds_yr.to_netcdf(yr_fname, encoding=ct_encoding, unlimited_dims=["date"])
-        else:
-            n_partial_year_files += 1
-            print(f"  {year}: partial ({n_in_year} mo), skipping per-year file", end="")
-        print(f"  {year}:", end="")
-
-        for month_key, ds_mon in ds_yr.groupby("date.month"):
-            month = int(month_key)
-            mon_fname = os.path.join(CT_DIR, f"{ct_prefix}.{year}{month:02d}.nc")
-            ds_mon.to_netcdf(mon_fname, encoding=ct_encoding, unlimited_dims=["date"])
-            print(f" {month}", end="", flush=True)
-        print()
-
-    # --- output validation ---
-    full_years = (n_months - (n_partial_year_files * 1)) // 12  # imprecise; compute below
-    all_ct = [f for f in os.listdir(CT_DIR)
-              if f.startswith(ct_prefix + ".") and f.endswith(".nc")]
-
-    def stem(f: str) -> str:
-        return f.replace(ct_prefix + ".", "").replace(".nc", "")
-
-    yr_files = sorted(f for f in all_ct if len(stem(f)) == 4 and stem(f).isdigit())
-    mon_files = sorted(f for f in all_ct if len(stem(f)) == 6 and stem(f).isdigit())
-    full_years = n_months // 12  # partial last year (n_months % 12 != 0) just gets fewer files
-    assert len(mon_files) == n_months, (
-        f"Expected {n_months} per-month files, found {len(mon_files)}")
-    # Per-year files: should be `full_years` (skip the partial year if any).
-    assert len(yr_files) == full_years, (
-        f"Expected {full_years} per-year files (full years only), "
-        f"found {len(yr_files)}")
-
-    # spot-check: each per-year file should have 12 months
-    for yf in yr_files:
-        ds_check = xr.open_dataset(os.path.join(CT_DIR, yf))
-        n = ds_check.sizes["date"]
-        ds_check.close()
-        assert n == 12, f"{yf}: expected 12 months, got {n}"
-
-    print(f"\nDone. CarbonTracker-format files written to {CT_DIR}/")
-    print(f"  {len(yr_files)} per-year files (full years), "
-          f"{len(mon_files)} per-month files")
-    print(f"  Pattern: {ct_prefix}.YYYY.nc  and  {ct_prefix}.YYYYMM.nc")
+    write_ct_files(ds_ct, CT_DIR, ct_prefix, n_months)
 
 
 if __name__ == "__main__":

@@ -27,7 +27,7 @@ import xarray as xr
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from constants import C_MOLAR_MASS
-from split_ct import build_carbontracker_dataset
+from split_ct import build_carbontracker_dataset, write_ct_files
 from timeutils import seconds_in_year
 
 # ── post_process import probe (geospatial stack may be absent in CI) ─────────
@@ -136,6 +136,38 @@ def test_build_ct_date_count_unchanged(synthetic_monolithic: xr.Dataset) -> None
     """All 24 months survive the transform — no months dropped or duplicated."""
     ct = build_carbontracker_dataset(synthetic_monolithic)
     assert ct.sizes["date"] == synthetic_monolithic.sizes["time"] == 24
+
+
+def test_write_ct_files_emits_partial_year(tmp_path: Path) -> None:
+    """split_ct writes a per-year file for the partial final year too (the NRT
+    tail), not just the full years — e.g. the v2026b `flux1x1_ff.2026.nc`."""
+    n_months = 14  # 12 (1993) + 2 (1994 Jan–Feb): a partial final year
+    starts = pd.date_range("1993-01-01", periods=n_months, freq="MS")
+    ends = starts + pd.offsets.MonthBegin(1)
+    mid = starts + (ends - starts) / 2
+    rng = np.random.default_rng(1)
+    ds = xr.Dataset(
+        data_vars={
+            "fossil_imp": (("time", "lat", "lon"),
+                           rng.uniform(1e-10, 1e-8, size=(n_months, 2, 2))),
+            "time_bnds": (("time", "bnds"),
+                          np.stack([starts.values, ends.values], axis=1)),
+        },
+        coords={"time": mid.values, "lat": [-45.0, 45.0], "lon": [0.0, 180.0]},
+    )
+    ct = build_carbontracker_dataset(ds)
+    yr_files, mon_files = write_ct_files(ct, str(tmp_path), "flux1x1_ff_test", n_months)
+
+    assert len(mon_files) == 14
+    assert len(yr_files) == 2, "expected 1 full + 1 partial per-year file"
+    assert "flux1x1_ff_test.1994.nc" in yr_files, "partial final year not written"
+
+    partial = xr.open_dataset(tmp_path / "flux1x1_ff_test.1994.nc")
+    assert partial.sizes["date"] == 2  # only Jan–Feb 1994
+    partial.close()
+    full = xr.open_dataset(tmp_path / "flux1x1_ff_test.1993.nc")
+    assert full.sizes["date"] == 12
+    full.close()
 
 
 # ═════════════════════════════════════════════════════════════════════════════

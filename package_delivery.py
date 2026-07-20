@@ -35,7 +35,7 @@ Orion-flat layout (always requires --method)::
 
     <outdir>/
     ├── README.md  CHANGELOG.md  split_ct.py
-    ├── flux1x1_ff.YYYY.nc       (per-year, full years only)
+    ├── flux1x1_ff.YYYY.nc       (per-year; final year may be partial)
     ├── flux1x1_ff.YYYYMM.nc     (per-month, includes partial-year tail)
     ├── v2026b_method_comparison.{md,png}
     └── from_ash/

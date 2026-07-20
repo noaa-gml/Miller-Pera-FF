@@ -44,8 +44,9 @@ inversion runs can reach into 2026 before the next Energy Institute release
 
 - **New:** `gml_ff_co2_2026b_<method>.nc` — extends the 1993–2025 series
   through **April 2026** (400 monthly time steps). Delivered as a monolithic
-  netCDF plus per-month CarbonTracker files; per-year files cover the 33 full
-  years only.
+  netCDF plus 400 per-month CarbonTracker files and 34 CarbonTracker per-year
+  files: 33 full years (1993–2025) plus a partial `flux1x1_ff_<method>.2026.nc`
+  (4 months, Jan–Apr). The TM5 `yearly/` per-year files remain full-years-only.
 - Two annual-baseline methods for the 2025 → 2026 step, written as separate
   files (`_assumed` and `_cm_yearly`) so the choice can be made at delivery:
   - `assumed` — gas/oil +2.5%, coal/flaring +1% per fuel (the `2026` rates
