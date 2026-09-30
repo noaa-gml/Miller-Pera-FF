@@ -26,8 +26,15 @@ PIPELINE_URL = "https://github.com/noaa-gml/Miller-Pera-FF"
 
 # Packages whose versions are recorded in every output file.
 _TRACKED_PACKAGES = (
-    "numpy", "scipy", "pandas", "xarray", "netCDF4",
-    "cf-xarray", "pint-xarray", "xcdat", "xesmf",
+    "numpy",
+    "scipy",
+    "pandas",
+    "xarray",
+    "netCDF4",
+    "cf-xarray",
+    "pint-xarray",
+    "xcdat",
+    "xesmf",
 )
 
 
@@ -36,7 +43,10 @@ def _git(*args: str) -> str:
     try:
         result = subprocess.run(
             ["git", *args],
-            capture_output=True, text=True, timeout=10, check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
             cwd=Path(__file__).parent,
         )
     except (OSError, subprocess.SubprocessError):
@@ -51,6 +61,13 @@ def _git_commit() -> str:
         return "unknown (not a git checkout)"
     state = "uncommitted changes present" if _git("status", "--porcelain") else "clean"
     return f"{sha} ({state})"
+
+
+def code_commit() -> str:
+    """Public alias of the commit descriptor, for scripts that record their own
+    provenance without the full ``provenance_attrs`` (which is output-specific).
+    """
+    return _git_commit()
 
 
 def _fingerprint(path: str) -> str:

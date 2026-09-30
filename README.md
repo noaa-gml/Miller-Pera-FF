@@ -8,7 +8,7 @@ Gridded 1° × 1° monthly fossil-fuel CO₂ emission estimates (1993–2025) fo
 
 Combines national inventories (**CDIAC**, **Energy Institute**, **USGS cement**) with **EDGAR** spatial patterns to produce a global, monthly, sector-resolved product.
 
-![Summary figure](outputs/summary_figure.png)
+![Summary figure](summary_figure.png)
 
 ## Quick Start
 
@@ -59,6 +59,8 @@ When CM publishes a new month (e.g., April 2026 lands in late May), re-run from 
 | **USGS Cement** | National cement production for extrapolation | [usgs.gov](https://www.usgs.gov/centers/national-minerals-information-center/cement-statistics-and-information) |
 | **GISS Country Grid** | 1° country assignment map (1993 boundaries) | [data.giss.nasa.gov](https://data.giss.nasa.gov/landuse/country.html) |
 | **CarbonMonitor** *(v2026b only)* | Daily NRT emissions, 36 countries + ROW + WORLD, 2019-01-01 onward | [carbonmonitor.org](https://carbonmonitor.org/) |
+| **GCB GridFED** *(comparison only)* | 0.1° monthly sector fluxes 1959–2024, built to 1° by `download_gridfed.py` | [Zenodo](https://doi.org/10.5281/zenodo.17467681) / [UEA mirror](https://opendap.uea.ac.uk/opendap/hyrax/greenocean/GridFED/GridFEDv2025.1/) |
+| **OCO-2 FF** *(comparison only)* | ODIAC × TIMES hourly 1° fluxes 2000–Feb 2026 (OCO-2 MIP prior), monthly-meaned on Orion by `orion/make_oco2ff_monthly.py`, fetched by `download_oco2ff.py` | [Zenodo](https://doi.org/10.5281/zenodo.19744619) |
 
 ## Output Formats
 
@@ -89,86 +91,36 @@ Dimension order `(time, lat, lon)` maps to Fortran column-major `(lon, lat, time
 
 ### Global and National Totals
 
-Annual global total fossil fuel CO₂ emissions are based on the Appalachian Energy Center's "[CDIAC at AppState](https://rieee.appstate.edu/projects-programs/cdiac/)" project [[Erb, M. & Marland G., 2026](https://doi.org/10.6084/m9.figshare.31449082),], which updates the original annual global and country fossil fuel CO₂ emissions estimates from the DOE's Carbon Dioxide Information and Analysis Center (CDIAC) [[Boden et al., 2017](
-https://doi.org/10.5194/essd-13-1667-2021)]. The CDIAC at AppState emissions estimates used in this product extend through 2022, covering 189 nations across six sectors: gas, liquid fuel, solid fuel, flaring, cement, and a computed total.
+Annual global and national fossil-fuel CO₂ totals come from the Appalachian Energy Center's "[CDIAC at AppState](https://rieee.appstate.edu/projects-programs/cdiac/)" project [[Erb & Marland, 2026](https://doi.org/10.6084/m9.figshare.31449082)], the continuation of the DOE CDIAC series [[Boden et al., 2017](https://doi.org/10.5194/essd-13-1667-2021)]. Data extend through 2022 for 189 nations in six sectors: gas, liquid, solid, flaring, cement, and total.
 
 ### Country Harmonisation
 
-The raw CDIAC national dataset contains 261 entities spanning the full historical record. Of these, 30 are historical entities with no data after 1993 (e.g., the former USSR, Czechoslovakia, East/West Germany) and are excluded. The remaining 231 active entities are harmonised to 189 canonical countries through three operations:
-
-- **Renaming:** Standardises variant spellings and historical name changes (e.g., "ZAIRE" → "Democratic Republic Of The Congo").
-- **Aggregation:** Merges small territories into their parent countries. For example, Eritrea is summed into Ethiopia, Timor-Leste into Indonesia, Gibraltar and Andorra into Spain, and the former Yugoslav republics (Croatia, Slovenia, Bosnia & Herzegovina, Kosovo, Serbia, Montenegro, Macedonia) are combined into a single Yugoslavia entry.
-- **Deletion:** Removes 22 very small territories with incomplete records and no GISS grid cells (e.g., Cayman Islands, Palau, Montserrat).
+Of 261 raw CDIAC entities, 30 historical ones with no post-1993 data (USSR, Czechoslovakia, …) are dropped and the rest reduced to 189 canonical countries by renaming, aggregating small territories into parents (e.g. ex-Yugoslav republics → Yugoslavia), and deleting 22 tiny territories with no GISS grid cells.
 
 ### CDIAC Sector Interpolation
 
-Many CDIAC country-year-sector cells are reported as NaN in the raw data — most commonly flaring (4025 NaN rows), but also gas (2432), solid fuel (2094), cement (315), and liquid fuel (48). These gaps are filled by linear interpolation within each nation's time series, with forward-fill for trailing NaN values. This is particularly important for the four French overseas departments (French Guiana, Guadeloupe, Martinique, Réunion), which have no CDIAC data after 2010 and are forward-filled from their last reported values.
-
-After interpolation, any row where the reported total does not match the sector sum (a consequence of the original total having been computed without the then-missing sector) is recomputed as the sum of the five sectors.
+Missing country-year-sector values (most often flaring) are linearly interpolated within each nation's series and forward-filled at the end; totals are then recomputed as the sum of the five sectors.
 
 ### Spatial Distribution
 
-Fossil-fuel CO₂ fluxes are spatially distributed in two steps. First, the coarse-scale country totals from CDIAC are mapped onto a 1° × 1° grid according to spatial patterns from the EDGAR v8.0 inventories [[Crippa et al., 2024](https://data.europa.eu/doi/10.2760/9816914)]. Each emission sector uses its own EDGAR spatial pattern within each country:
-
-- **Gas / oil / coal** → combustion pattern (EDGAR TOTALS minus NMM minus PRO_FFF)
-- **Cement** → NMM (non-metallic minerals manufacturing) — concentrated at cement plants
-- **Flaring** → PRO_FFF (fuel exploitation) — concentrated in oil/gas-producing regions
-
-The spatial pattern varies by year up to the end of the EDGAR v8.0 product (2022). After this, the spatial patterns are linearly extrapolated from recent trends. While EDGAR provides annual emissions estimates at 0.1° × 0.1° resolution (regridded here to 1° × 1°), their global totals do not agree with CDIAC, which we feel to be more authoritative due to being based on countries' own reporting. Therefore, only the spatial patterns in EDGAR are used, and the total emissions are rescaled to CDIAC values.
-
-The CDIAC country-by-country totals sum to about 95% of the global total emissions; the remaining ~5% is mapped to global shipping routes according to EDGAR, which serves as a proxy for international bunker fuel emissions.
+Country totals are mapped onto a 1° × 1° grid using per-sector patterns from the EDGAR 2025 GHG release [[Crippa et al., 2025](https://edgar.jrc.ec.europa.eu/dataset_ghg2025)] (combustion for gas/oil/coal, NMM for cement, PRO_FFF for flaring), regridded from 0.1°. Patterns vary by year through 2024; beyond that each sector grid is scaled by a single growth rate (`extrapolate_edgar.py`), holding the 2024 pattern fixed. Only EDGAR's patterns are used; totals are rescaled to CDIAC. The ~5% of the global total not attributed to countries is mapped onto EDGAR shipping routes as a proxy for bunker fuels.
 
 ### Temporal Distribution
 
-The pipeline converts annual emissions to monthly resolution in two stages:
-
-1. **Integral-preserving interpolation:** A piecewise integral-preserving quadratic spline (PIQS) [[Rasmussen, 1991](https://doi.org/10.1016/0098-3004(91)90027-B)] is fit to each 1° × 1° grid cell independently. For each annual segment, a quadratic *f(t) = a(t−x)² + b(t−x) + c* is chosen such that the integral over the year equals the annual total, continuity and differentiability hold at every year boundary, and a global smoothness measure is minimised. The spline is evaluated at daily resolution and then binned into monthly means. If any day in a pixel-year goes negative (a spline artefact for rapidly declining emissions), the smooth curve is replaced with the constant annual mean for that pixel-year.
-
-2. **Seasonal modulation:** For North America (30–60°N, 60–140°W), a seasonal cycle derived from the first and second harmonics [[Thoning et al., 1989](https://doi.org/10.1029/JD094iD06p08549)] of the Blasing et al. [[2005](https://doi.org/10.1029/2007JG000435)] analysis for the United States is applied. The Blasing analysis produces ~10% higher emissions in winter than in summer. This scheme defines a fixed fraction of emissions for each month, so while the shape of the annual cycle is invariant, the amplitude scales with the annual total. For Eurasia (30–60°N, 20°W–170°E), a separate set of seasonal emissions factors derived from EDGAR sector-resolved data is applied. The Eurasian seasonal amplitude is about 25%, significantly larger than North America, owing to the absence of a secondary summertime maximum from air conditioning. Outside these two zones, no seasonal modulation is applied.
+A piecewise integral-preserving quadratic spline (PIQS) [[Rasmussen, 1991](https://doi.org/10.1016/0098-3004(91)90027-B)] is fit per grid cell and binned to monthly means; a pixel-year that goes negative reverts to its constant annual mean. A seasonal cycle with fixed monthly fractions is then imposed between 30–60°N: over North America (60–140°W) the first two harmonics [[Thoning et al., 1989](https://doi.org/10.1029/JD094iD06p08549)] of the Blasing et al. [[2005](https://doi.org/10.1029/2007JG000435)] US analysis (~10% winter-over-summer); over Eurasia (20°W–170°E) EDGAR-derived sectoral factors (~25%). None elsewhere.
 
 ### Extrapolation Beyond CDIAC
 
-The full CDIAC at AppState dataset is available through 2022 and EDGAR spatial patterns through 2022 at time of production. A prior estimate of fluxes through 2025 is required to accommodate the assimilation window.
-
-For **2023–2024**, per-country fractional increases in sectoral emissions are taken from:
-1. The **Energy Institute** Statistical Review of World Energy [EI, 2025](https://www.energyinst.org/statistical-review/about) for coal, oil, gas, and flaring
-2. The **USGS** National Minerals Information Center [Cement Mineral Commodity Summaries](https://www.usgs.gov/centers/national-minerals-information-center/cement-statistics-and-information) for cement
-
-For example, to compute 2023 coal emissions for France, the EI ratio of 2023 to 2022 French coal consumption is used to scale the 2022 CDIAC value, which is then distributed using the EDGAR spatial pattern.
-
-The EI does not report individual data for all 189 CDIAC countries. Countries without direct EI coverage are assigned to regional aggregates defined in two JSON configuration files (`EI_2024_fuel_regions.json` and `EI_2024_flaring_regions.json`). For fuels (oil, gas, coal), 76 countries have direct EI data and 113 use one of 12 regional aggregates (e.g., "Eastern Africa", "Central America", "Other Asia Pacific"). For flaring, 49 countries have direct EI data and 140 use one of 6 broader regional aggregates (e.g., "Other Africa", "Other Europe"). All countries within a regional aggregate share the same year-over-year growth rate. Where a country has NaN ratios even after regional assignment (e.g., zero base-year consumption), the global-average fractional change is used as a fallback.
-
-Flaring uses the same per-country EI ratio mechanism as the combustion fuels: countries with direct EI flaring data get their own year-over-year CO₂-from-flaring growth rates, while countries in regional aggregates share the regional rate. For the global total extrapolation (used to compute the bunker-fuel residual), flaring volumes (BCM) are read from the EI "Natural Gas Flaring" sheet and converted to year-over-year ratios.
-
-For **2025**, USGS cement data is available and per-country cement ratios are applied directly. For combustion fuels and flaring, assumed growth rates are applied uniformly across all countries: oil +2.5%, gas +2.5%, coal +1%, flaring +1%. These rates reflect consensus near-term projections and are configured in `ff_country.py` (step 3a′ of `main()`).
+For 2023–2024, per-country sectoral growth ratios come from the Energy Institute Statistical Review [[EI, 2025](https://www.energyinst.org/statistical-review/about)] (coal, oil, gas, flaring) and the USGS [Cement Mineral Commodity Summaries](https://www.usgs.gov/centers/national-minerals-information-center/cement-statistics-and-information) (cement). Countries without direct EI coverage share a regional aggregate's rate (`EI_2024_*_regions.json`), with the global average as a final fallback. For 2025, USGS cement ratios apply directly; otherwise uniform assumed rates — oil and gas +2.5%, coal and flaring +1% (`ff_country.py`, step 3a′).
 
 ### v2026b NRT Extension — CarbonMonitor through April 2026
 
-The frozen v2026 product (1993–2025) is post-EI / pre-CarbonMonitor. For inversion runs that need a few months into 2026 before the next EI release in mid-June, a **v2026b** product extends the time series through April 2026 using [CarbonMonitor](https://carbonmonitor.org/) (CM) near-real-time daily emissions [[Liu et al., 2020](https://doi.org/10.1038/s41597-020-00708-7)]. CM publishes country-level monthly aggregates updated approximately every 2–4 weeks; the May 2026 update covers 2019-01-01 through 2026-03-31 for 36 individual countries (all 27 EU members plus US, China, India, Japan, Russia, UK, Norway, Switzerland, Brazil) plus `ROW` and `WORLD` aggregate rows. Aviation sectors are dropped (matching the legacy IDL pipeline).
+v2026b extends the frozen v2026 product (1993–2025) through April 2026 using [CarbonMonitor](https://carbonmonitor.org/) (CM) monthly country-level emissions [[Liu et al., 2020](https://doi.org/10.1038/s41597-020-00708-7)] (36 countries plus `ROW` and `WORLD`):
 
-v2026b has two components:
+1. **2026 annual baseline** — `assumed` (2025 per-fuel rates compounded one more year; default) or `cm_yearly` (per-country CM year-to-date ratio, all sectors). Both are written (`gml_ff_co2_2026b_<method>.nc`) and agree within ~0.03% annually.
+2. **Per-cell monthly overwrite** where CM has both years: `X_2026[cell] = X_2025[cell] × CM_YoY[country, month]`, keyed on the cell's CDIAC country (`ROW` for untracked countries, `WORLD` for ocean/bunker cells), matching the IDL `ff_country_new2023a.pro`. Unpublished months keep the spline + seasonal values until CM is re-downloaded and the pipeline rerun.
 
-1. **Annual baseline for 2025 → 2026.** Two methods are produced for comparison; both are valid choices.
-   * `assumed` — same per-fuel rates we used for 2025 (gas/oil +2.5%, coal/flaring +1%, cement flat — USGS hasn't published 2026 yet) compounded one more year. Default and most consistent with the 2025 methodology.
-   * `cm_yearly` — per-country CM year-to-date ratio (sum of available 2026 months / same 2025 months) applied uniformly across all five sectors (CM doesn't break down by fuel type). Countries not directly tracked use the `ROW` row.
-
-   Both methods are written to disk as separate NetCDFs (`gml_ff_co2_2026b_assumed.nc` and `gml_ff_co2_2026b_cm_yearly.nc`); the choice is made at delivery time. Annual totals agree within ~0.03%; per-month 2026 totals within ~0.5%; spatial rel-RMS typically ~0.25% (up to ~0.9% in the most recent month).
-
-2. **Monthly NRT overwrite for Feb–Apr 2026.** After the PIQS spline and seasonal cycle run as usual, months for which CM has both prior-year and current-year data are overwritten **per cell**:
-
-   ```
-   Feb_2026[cell] = Feb_2025[cell] × CM_YoY_ratio[country, Feb]
-   Mar_2026[cell] = Mar_2025[cell] × CM_YoY_ratio[country, Mar]
-   Apr_2026[cell] = Apr_2025[cell] × CM_YoY_ratio[country, Apr]   (when CM publishes April)
-   ```
-
-   The ratio for each cell is looked up by the cell's assigned canonical CDIAC country — directly tracked countries get their own CM YoY ratio, the 154 fallback countries get the CM `ROW` row, and ocean / bunker cells use the `WORLD` row. Anchoring on prior-year-same-month preserves whatever seasonal pattern the pipeline already produced for the prior year (Blasing for NAM, EDGAR-derived for Eurasia, flat elsewhere) and applies only a per-country YoY scalar on top — matching the IDL semantics in `ff_country_new2023a.pro`.
-
-Months CM hasn't published yet (e.g., April 2026 in a pre-May CM release) are silently skipped — those slots keep whatever the spline + seasonal cycle produced. Re-running `download_carbon_monitor.py --force` followed by `ingest.py` and the pipeline picks up the new month once it lands.
-
-The output netCDF is truncated to the partial-year boundary (April 2026), giving 400 monthly time steps. The CarbonTracker outputs are 400 per-month files plus 34 per-year files — the 33 full years (1993–2025) and a partial `flux1x1_ff_<method>.2026.nc` (4 months, Jan–Apr). The TM5 `yearly/` per-year files cover the 33 full years only (no partial 2026).
-
-A "method comparison" report (markdown + figure) is generated by `compare_methods.py`, and `verify_nrt.ipynb` runs three v2026b-specific sanity checks (partial-year structure, per-cell YoY overwrite verification, bounded spline-propagation noise).
+Output is truncated at April 2026 (400 monthly steps; 33 full years plus a partial 2026 file). `compare_methods.py` and `verify_nrt.ipynb` provide the method comparison and v2026b checks.
 
 ### Pipeline Overview
 
@@ -213,6 +165,23 @@ The verification notebook (`verify.ipynb`) runs 90+ checks organised into two pa
 
 </details>
 
+## Comparison with Other Products
+
+`compare_products.py` compares the delivered product with two independent gridded fossil-fuel products that are also used as inversion priors, on the common 1° × 1° monthly grid (full tables in `outputs/product_comparison.md`). GridFED is built reproducibly from the upstream release by `download_gridfed.py` (`inputs/GridFED_v2025.1/_readme.md`); OCO-2 FF is monthly-meaned from NOAA's copy of the published hourly files on Orion by `orion/make_oco2ff_monthly.py` and fetched by `download_oco2ff.py` (`inputs/OCO2FF_v2026.2/_readme.md`):
+
+| Product | Construction | Overlap |
+|---|---|---|
+| **GCB GridFED** v2025.1 [[Jones et al., 2021](https://doi.org/10.1038/s41597-020-00779-6)] | Global Carbon Budget national totals distributed with EDGAR v4.3.2 patterns (CarbonMonitor seasonality in recent years); 0.1° monthly, summed to 1°; compared as gross emissions (`TOTAL − CEMENT_CARBONATION`) | 1993–2024 |
+| **OCO-2 FF** v2026.2 [[Basu & Nassar, 2026](https://doi.org/10.5281/zenodo.19744619)] | ODIAC [[Oda et al., 2018](https://doi.org/10.5194/essd-10-87-2018)] — CDIAC-based national totals distributed by power-plant database + nightlights — convolved with TIMES temporal factors [[Nassar et al., 2013](https://doi.org/10.1029/2012JD018196)]; the OCO-2 MIP prior, hourly 1°, monthly-meaned on Orion (Mar–Apr 2026 flagged as A. Jacobson's extrapolation) | 2000–Feb 2026 |
+
+![Product comparison](outputs/product_comparison.png)
+
+- **Annual global totals** agree to within a few percent. Both reference products run above Miller-Pera: OCO-2 FF by +0.3 to +2.5% (mean +1.1%, 2000–2025); GridFED (gross) by +2 to +3% through 2011, converging to within ±0.7% from 2016 on (mean +1.7%, 1993–2024). All three products show the same 2020 COVID-19 dip (−4.4 to −5.4%).
+- **Spatial pattern.** Cell-wise correlation of annual-mean flux is *r* ≈ 0.62–0.72 (linear) — dominated by a few hundred point-source cells, chiefly in eastern China, where the products' EDGAR versions / ODIAC point-source placements disagree by factors of 2–20 — and *r* ≈ 0.75–0.84 on log₁₀ flux, i.e. the broad distribution agrees well. rel-RMS of the difference is 70–90% of the field RMS, again dominated by those cells.
+- **Seasonal cycle.** In the 30–60°N band (2015–2019 mean) Miller-Pera has a max−min amplitude of 40% of the annual mean (Jan 1.21 / Jul 0.81), versus 16% for GridFED and 14% for OCO-2 FF (TIMES). The larger amplitude comes from the EDGAR-derived Eurasian factors (Jan 1.23 / Jul 0.75); the North American (Blasing) cycle alone is 24%.
+
+Regenerate with `make compare-products` (or `python compare_products.py --method cm_yearly` for the other v2026b baseline).
+
 ## Directory Layout
 
 ```
@@ -222,15 +191,20 @@ miller-ff/
 ├── constants.py                   # physical constants (Earth radius, C molar mass)
 ├── country_names.py               # country-name harmonisation
 ├── download_carbon_monitor.py     # Step 0a — fetch CarbonMonitor NRT data
+├── download_gridfed.py            # build the GridFED 1° reference product (comparison only)
+├── download_oco2ff.py             # fetch the OCO-2 FF 1° reference product from Orion (comparison only)
+├── orion/make_oco2ff_monthly.py   #   its Orion-side builder (hourly → monthly means)
 ├── extrapolate_edgar.py           # Step 0b — extend EDGAR if needed
 ├── ingest.py                      # Step 1 — ingest & harmonise inputs
 ├── ff_country.py                  # Step 2 — gridding & seasonal cycle
 ├── post_process.py                # Step 3 — netCDF conversion (auto-calls split_ct)
 ├── split_ct.py                    # Step 3b — CarbonTracker reformat
 ├── compare_methods.py             # v2026b method comparison
+├── compare_products.py            # comparison vs GridFED + OCO-2 FF (ODIAC × TIMES)
 ├── verify.ipynb                   # Step 4 — 90+ quality checks
 ├── verify_nrt.ipynb               # v2026b method-comparison checks
 ├── package_delivery.py            # build the delivery bundle from source
+├── summary_figure.png             # README / landing-page figure (regenerated by verify.ipynb)
 ├── tests/                         # pytest suite (unit / property / integration)
 ├── inputs/                        # Raw input data (paths set in config.py)
 │   ├── CDIAC/                     #   CDIAC xlsx files
@@ -241,13 +215,15 @@ miller-ff/
 │   ├── PRO_FFF_flx_nc_2025_GHG/  #   EDGAR flaring sector
 │   ├── USGS_cement/               #   USGS cement CSVs
 │   ├── carbon_monitor/            #   CarbonMonitor NRT CSVs
+│   ├── GridFED_v2025.1/           #   GridFED 1° reference product (download_gridfed.py)
+│   ├── OCO2FF_v2026.2/            #   OCO-2 FF 1° reference product (download_oco2ff.py)
 │   └── COUNTRY1X1.*               #   GISS country grid
 ├── processed_inputs/              # Intermediates from Step 1
 ├── outputs/
 │   ├── yearly/                    #   Per-year TM5-format files
 │   ├── ct/                        #   CarbonTracker-format files
 │   ├── gml_ff_co2_2026b_<method>.nc  #   Monolithic (all years, per method)
-│   └── summary_figure.png         #   README figure
+│   └── product_comparison.{md,png}   #   comparison vs GridFED + OCO-2 FF
 └── archive/                       # Previous versions
 ```
 
