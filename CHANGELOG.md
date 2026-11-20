@@ -11,6 +11,35 @@ This project loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ---
 
+## [Unreleased]
+
+### Tooling
+
+- **`compare_products.py`** — new: compares the delivered product against
+  two independent gridded fossil-fuel products on the common 1° × 1° monthly
+  grid — GCB GridFED v2025.1 (1993–2024) and the OCO-2 MIP prior OCO-2 FF
+  v2026.2 (ODIAC × TIMES, 2000–Feb 2026): annual global totals, cell-wise
+  spatial correlation (linear and log₁₀) of annual-mean flux, and the
+  30–60°N seasonal cycle. Writes `outputs/product_comparison.{md,png}`;
+  `make compare-products`. Summary added to README.md and methodology.html.
+- **`download_gridfed.py`** — new: makes GridFED a reproducible input.
+  Downloads each 0.1° yearly file of the pinned release
+  (`config.GRIDFED_VERSION`, UEA mirror of the Zenodo record), records its
+  MD5 in `inputs/GridFED_<ver>/checksums.md5`, sums every `CO2` sector
+  (incl. `CEMENT_CARBONATION` and `TOTAL`) into 1° cells (mass-conserving),
+  converts to mol C m⁻² s⁻¹ with the pipeline's cell areas, and writes
+  `inputs/GridFED_<ver>/GCP-GridFED<ver>_1x1_<year>.nc` with full source
+  provenance. `make gridfed`.
+- **`download_oco2ff.py`** + **`orion/make_oco2ff_monthly.py`** — new: the
+  same for OCO-2 FF. The builder runs on Orion against NOAA's CF-ised copy
+  of the published hourly product, averages each month (equal-weight
+  hours), flags the Mar–Apr 2026 months that are A. Jacobson's extension
+  rather than the published record, and writes per-year 1° files with
+  source provenance plus `checksums.md5` into
+  `/work2/noaa/co2/input/FF/OCO2/v2026.2.monthly_1x1/`; the local script
+  `rsync`s them into `inputs/OCO2FF_<ver>/` and verifies the MD5s and
+  schema. `make oco2ff`. `inputs/comparison/` is gone.
+
 ## [1.0.1] — 2026-06-08 — security patch + Makefile hardening
 
 Software-only patch released between data revisions. The **data product is

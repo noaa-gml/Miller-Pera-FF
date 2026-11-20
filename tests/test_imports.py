@@ -10,6 +10,7 @@ the modules that need the conda-only geospatial packages (xesmf / xcdat) are
 imported behind ``importorskip``: they run in the conda-based CI job and
 skip in the lightweight one.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -32,6 +33,9 @@ LIGHT_MODULES = [
     "ff_country",
     "split_ct",
     "compare_methods",
+    "compare_products",
+    "download_gridfed",
+    "download_oco2ff",
 ]
 
 # Need the conda-only geospatial stack (xesmf / xcdat).

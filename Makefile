@@ -63,9 +63,15 @@ cm_yearly:  ## Build the 'cm_yearly'-method outputs
 	$(PYTHON) post_process.py --method cm_yearly
 
 # ── comparison & verification ────────────────────────────────────────────
-.PHONY: compare verify
+.PHONY: compare compare-products verify
 compare:  ## Generate the v2026b method-comparison report
 	$(PYTHON) compare_methods.py
+gridfed:  ## Download GCB GridFED and build the 1° reference product (inputs/GridFED_<ver>/)
+	$(PYTHON) download_gridfed.py
+oco2ff:  ## Fetch the OCO-2 FF 1° reference product from Orion (inputs/OCO2FF_<ver>/; --build to rebuild there)
+	$(PYTHON) download_oco2ff.py
+compare-products:  ## Compare against GridFED + OCO-2 FF (needs `make gridfed oco2ff`)
+	$(PYTHON) compare_products.py --method $(METHOD)
 verify:  ## Execute the verify_nrt.ipynb quality-check notebook
 	$(PYTHON) -m jupyter nbconvert --to notebook --execute --inplace verify_nrt.ipynb
 

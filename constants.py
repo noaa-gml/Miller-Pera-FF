@@ -21,3 +21,8 @@ EARTH_RADIUS: float = 6371.009
 # Molar mass of carbon (g/mol). Used in the Gg C → mol conversion chain
 # (Gg C → g → mol via `1e9 / C_MOLAR_MASS`) and the reverse mol → PgC.
 C_MOLAR_MASS: float = 12.011
+
+# Molar mass of oxygen (g/mol); CO2 = C + 2 O. Used to convert reference
+# products reported as kg CO2 (GridFED) into mol.
+O_MOLAR_MASS: float = 15.999
+CO2_MOLAR_MASS: float = C_MOLAR_MASS + 2 * O_MOLAR_MASS

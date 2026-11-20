@@ -1,0 +1,22 @@
+
+
+**  Mon 14 Sep 2026 21:11:00 UTC by Ash Pera <ashley.pera@colorado.edu> **
+
+  1x1 monthly means of ../v2026.2/CF/fossil_fuel_1x1_YYYYMMDD.nc (Andy's
+  CF-ised copy of Sourish Basu & Ray Nassar's OCO-2 MIP fossil fuel prior,
+  ODIAC x TIMES, v2026.2, https://doi.org/10.5281/zenodo.19744619), one
+  file per year, for the Miller-Pera FF product comparison
+  (https://github.com/noaa-gml/Miller-Pera-FF, compare_products.py).
+
+  Built by make_oco2ff_monthly.py (copy in this directory; canonical copy
+  in the Miller-Pera-FF repo under orion/) with
+  /work2/noaa/co2/miniconda3/envs/tm5_312/bin/python:
+
+    python make_oco2ff_monthly.py --src ../v2026.2/CF --dst . --years 2000-2026
+
+  'emission' = arithmetic mean of every hourly field in the month, mol C
+  m-2 s-1, float32; plus n_source_hours, extrapolated (1 for Mar-Apr 2026,
+  which are Andy's ncbo extension, not the published product), cell_area
+  (spherical, R = 6371.009 km), month_seconds, time_bnds. Global attrs
+  carry the source dir/file count and the source files' history/source.
+  checksums.md5 covers the product files; build.log is the build output.
