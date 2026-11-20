@@ -59,11 +59,8 @@ COUNTRY_MAP = Path("inputs/COUNTRY1X1.1993.mod.txt")
 COUNTRY_CODES = Path("inputs/COUNTRY1X1.CODE.mod2.2013.csv")
 OUT_MD = Path("outputs/national_comparison.md")
 # Ungridded GCB national table, the source of GridFED's national totals (one vintage
-# older than GridFED v2025.1). Optional cross-check; not in the repo.
-GCB_NATIONAL_XLSX = (
-    Path.home()
-    / "Documents/analysis/downloaded-data/National_Fossil_Carbon_Emissions_2024v1.0-2.xlsx"
-)
+# older than GridFED v2025.1). Optional cross-check; gitignored (*.xlsx).
+GCB_NATIONAL_XLSX = Path("inputs/National_Fossil_Carbon_Emissions_2024v1.0-2.xlsx")
 GCB_NAMES = {"United States Of America": "USA", "Trinidad And Tobago": "Trinidad and Tobago"}
 OUT_PNG = Path("outputs/national_comparison.png")
 

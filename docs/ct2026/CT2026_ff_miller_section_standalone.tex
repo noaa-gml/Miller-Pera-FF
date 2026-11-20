@@ -1,0 +1,332 @@
+\documentclass[11pt,openany]{book}
+
+% NOTE: figure size in the PDF is controlled by the [width=NNin]-style argument
+% to the \includegraphics statements. This does NOT control figure size in the
+% HTML/PHP. You need to control that in the process_doc script, where <img> tags
+% get explicit size specifications.
+
+\usepackage{lscape}
+\usepackage[en-US]{datetime2}
+\usepackage{amssymb,amsmath}
+\usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue]{hyperref}
+%\usepackage{hyperref}
+\usepackage{longtable}
+%% \usepackage{floatrow} % This kills htlatex!
+\usepackage{graphicx}
+%%\usepackage{caption}
+\usepackage{times}
+\usepackage{setspace}
+\usepackage{rotating}
+\usepackage{multirow}
+\usepackage{tocloft}
+\usepackage{enumitem}
+\usepackage{color, colortbl}
+%% \usepackage{color}
+\usepackage{amsmath,amssymb}
+% \usepackage[noheads,tablesfirst,notablist]{endfloat}
+\usepackage{array} % for paragraph box ragged right in tables, TLC p.249
+\usepackage{booktabs} % proper rules (lines) for tables
+\usepackage[margin=2.54cm]{geometry}
+\usepackage{dcolumn}  % decimal-aligned columns.  p. 274 of TLC2
+%\usepackage[displaymath,mathlines]{lineno}  % see \linenumbers later on
+\usepackage[round]{natbib}  % all options handled by \bibstyle@XXX command below.
+%\usepackage[hang,small,bf]{caption}
+\usepackage[small,bf]{caption}%
+\usepackage{subcaption}
+\usepackage{authblk}
+%\setlength{\captionmargin}{20pt}
+
+%\bibliographystyle{abbrvnat}
+\bibliographystyle{apalike}
+%\bibliographystyle{agufull08}
+\setcitestyle{round}
+%\makeatletter \bibstyle@agu\makeatother
+
+%\renewcommand\Affilfont{\itshape\small}
+\DeclareMathOperator{\sign}{sign}
+
+% Prevent indentation of paragraphs following the first in each section
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.5\baselineskip} % make sure there's space between paragraphs
+
+\newcommand\ctver{CT2026}
+
+% Alter some LaTeX defaults for better treatment of figures:
+    % See p.105 of "TeX Unbound" for suggested values.
+    % See pp. 199-200 of Lamport's "LaTeX" book for details.
+    %   General parameters, for ALL pages:
+    \renewcommand{\topfraction}{0.9}	% max fraction of floats at top
+    \renewcommand{\bottomfraction}{0.8}	% max fraction of floats at bottom
+    %   Parameters for TEXT pages (not float pages):
+    \setcounter{topnumber}{2}
+    \setcounter{bottomnumber}{2}
+    \setcounter{totalnumber}{4}     % 2 may work better
+    \setcounter{dbltopnumber}{2}    % for 2-column pages
+    \renewcommand{\dbltopfraction}{0.9}	% fit big float above 2-col. text
+    \renewcommand{\textfraction}{0.07}	% allow minimal text w. figs
+    %   Parameters for FLOAT pages (not text pages):
+    \renewcommand{\floatpagefraction}{0.7}	% require fuller float pages
+	% N.B.: floatpagefraction MUST be less than topfraction !!
+    \renewcommand{\dblfloatpagefraction}{0.7}	% require fuller float pages
+
+	% remember to use [htp] or [htpb] for placement
+
+    \hypersetup{pdftitle={\ctver\  Documentation}}
+
+
+
+\makeatletter
+\newcommand\appendix@chapter[1]{%
+  \refstepcounter{chapter}%
+  \def\app@ct{Appendix \@Alph\c@chapter: #1}
+  \orig@chapter*{\app@ct}%
+  \markboth{\MakeUppercase{\app@ct}}{\MakeUppercase{\app@ct}}
+  \addcontentsline{toc}{chapter}{\app@ct}%
+}
+\let\orig@chapter\chapter\g@addto@macro\appendix{\let\chapter\appendix@chapter}
+\makeatother
+
+
+\usepackage{xurl}
+\begin{document}
+
+\begin{center}
+{\Large
+CarbonTracker Documentation \\
+  \ctver\  release\\
+\vspace{1em}
+\large
+%\today
+DRAFT of \DTMnow
+}
+
+\vspace{1em}
+\normalsize
+\end{center}
+\normalsize
+
+\definecolor{Gray}{gray}{0.9}
+
+\newcommand{\cmpd}[2]{\text{#1}_{#2}}
+\newcommand{\iso}[2]{^{#1}\text{#2}}
+\newcommand\pgcyr{\text{Pg C}~\text{yr}^{-1}}
+\newcommand\tgcyr{\text{Tg C}~\text{yr}^{-1}}
+\newcommand\gcmtwoyr{\text{g C}\,\text{m}^{-2}\,\text{yr}^{-1}}
+\newcommand\cstar{\text{C}^{*}}
+\newcommand\cstarpi{\text{C}^{*}_\text{\sc pi}}
+\newcommand\cant{\text{C}_{\text{ant}}}
+\newcommand\cotwo{\cmpd{CO}{2}}
+\newcommand\radiocotwo{^{14}\cmpd{CO}{2}}
+\newcommand\cfourteen{^{14}\text{C}}
+\newcommand\methane{\cmpd{CH}{4}}
+\newcommand\nno{\text{N}_2\text{O}}
+\newcommand\sffffff{\cmpd{SF}{6}}
+\newcommand\pcotwo{p\protect\text{CO}_\protect\text{2}}
+%\newcommand\dpcotwo{\Delta\it{p}\text{CO}_\text{2}}
+\newcommand\dpcotwo{\Deltap\cmpd{CO}{2}}
+\newcommand\pcfc{p\text{CFC}}
+\newcommand\cov{\text{cov}}
+\newcommand\degrees{^{\circ}}
+\newcommand\halfdeg{0.5^{\circ}\times0.5^{\circ}}
+\newcommand\onedeg{1^{\circ}\,\times\,1^{\circ}}
+\newcommand\threedeg{3^{\circ}~\text{longitude}\,\times\,2^{\circ}~\text{latitude}}
+\newcommand\sixdeg{6^{\circ}~\text{lon}\,\times\,4^{\circ}~\text{lat}}
+\newcommand\umolkg{~\mu\text{mol}~\text{kg}^{-1}}
+\newcommand\pmolmol{~\text{pmol}~\text{mol}^{-1}}
+\newcommand\uatm{~\mu\text{atm}}
+\newcommand\uatmyr{~\mu\text{atm}~\text{yr}^{-1}}
+\newcommand\dcbio{\Delta\text{C}_\text{bio}}
+\newcommand\K{\mathbf{K}}
+\renewcommand\H{\mathbf{H}}
+\newcommand\I{\mathbf{I}}
+\newcommand{\x}[1]{\mathbf{x}_\text{#1}}
+\renewcommand{\P}[1]{\mathbf{P}_\text{#1}}
+\newcommand\fc{\Phi_\text{contemp}}
+\newcommand\fpi{\Phi_\text{preindust}}
+\newcommand\fa{\Phi_\text{anthro}}
+\newcommand\otnt{\cmpd{O}{2}/\cmpd{N}{2}}
+\newcommand\about{\sim\negthickspace}
+\newcommand\rr[2]{R_\text{#1:#2}}
+\newcommand\rnp{\rr{N}{P}}
+\newcommand\rcp{\rr{C}{P}}
+\newcommand\rop{\rr{O$_2$}{P}}
+\newcommand\alk{\text{Alk}}
+\newcommand\half{\frac{1}{2}}
+\newcommand\phosphate{\text{PO}_4^{-3}}
+\newcommand\cacarb{\cmpd{CaCO}{3}}
+\newcommand\nitrate{\cmpd{NO}{3}^{-}}
+\newcommand{\etal}{\textit{et al}.}
+\newcommand{\ie}{\textit{i}.\textit{e}.}
+\newcommand{\eg}{\textit{e}.\textit{g}.}
+\newcommand{\cf}{\textit{cf}.}
+\setcounter{chapter}{3}\setcounter{section}{1}\setcounter{subsection}{0}\setcounter{equation}{0}
+\noindent{\Large\bfseries 3.1 Fossil fuel module --- Miller-Pera subsection, revised 2026-09-08}\par\medskip
+\subsection{The ``Miller-Pera'' emissions dataset}\label{sec:ff_miller}
+
+\begin{description}
+%\itemsep1pt\parskip0pt\parsep0pt
+%\item \textbf{Global and National Totals}
+\item[Global and National Totals]  The Miller-Pera fossil fuel emission
+  inventory \citep{pera26a} is derived from independent global total and
+  spatially-resolved inventories.  Annual global total fossil fuel
+  $\cotwo$ emissions are based on the Appalachian Energy Center’s
+  “CDIAC at AppState” project
+  (\href{https://rieee.appstate.edu/projects-programs/cdiac/}{https://rieee.appstate.edu/projects-programs/cdiac/};
+  \citealp{erb26a}),
+  which is an effort to update the original annual global and country
+  fossil fuel-$\cotwo$ emissions estimates from the DOE’s Carbon Dioxide
+  Information and Analysis Center (CDIAC) \citep{boden17a}. The
+  CDIAC at AppState emissions estimates used in \ctver\ extend through
+  2022.
+
+\item[Spatial Distribution] Miller-Pera fossil-fuel $\cotwo$ fluxes are
+  spatially distributed in two steps: First, the coarse-scale country
+  totals through 2022 from CDIAC at AppState are mapped onto a
+  \href{http://data.giss.nasa.gov/landuse/country.html}{$\onedeg$
+    grid} according to the spatial patterns from the EDGAR 2025 GHG
+  release \citep{crippa25a}. The spatial pattern varies
+  by year up until the end of the EDGAR product in 2024.  After
+  this, the 2024 spatial pattern is held constant.
+  Note that while EDGAR provides annual emissions estimates at
+  $\onedeg$ resolution, their totals do not agree with those from
+  CDIAC at AppState. Thus, only the spatial patterns in EDGAR are
+  used, and the total emissions are rescaled to CDIAC values.
+  The CDIAC country-by-country totals sum to about 95\% of the
+  global total emissions; the remaining 5\% is mapped to global
+  shipping routes according to EDGAR, which we treat as a proxy for
+  bunker fuel emissions.
+
+\item[Temporal Distribution] For North America between 30 and
+  60$\degrees$N, the Miller-Pera system imposes a seasonal cycle derived
+  from the first and second harmonics \citep{thoning89a} of the
+  \citet{blasing04a} analysis for the United States. The Blasing
+  analysis has \textasciitilde{}10\% higher emissions in winter than
+  in summer.  This scheme defines a fixed fraction of emissions for
+  each month, so while the shape of the annual cycle is invariant, the
+  amplitude of that cycle scales with the annual total emissions. For
+  Eurasia, a set of seasonal emissions factors from EDGAR distributed
+  by emissions sector is used to define fossil fuel seasonality. As
+  in North America, this seasonality is imposed only from
+  30{-}60$\degrees$N. The Eurasian seasonal amplitude is about 25\%,
+  significantly larger than that in North America, owing to the
+  absence of a secondary summertime maximum due to air conditioning.
+  See Figure~\ref{fig:fossil_tser} for the resulting time series
+  of fossil fuel emissions. In order to avoid discontinuities in the
+  fossil fuel emissions between consecutive years, a spline curve that
+  conserves annual totals \citep{rasmussen91a} is fit to the annual
+  emissions in each $\onedeg$ grid cell before the seasonal cycle is
+  imposed.
+
+  Whereas early CarbonTracker releases used monthly-constant fossil fuel
+emissions, starting with CT2015 we introduced the use of temporal
+scaling factors to simulate day-of-week and diurnal variability for
+those emissions.  These ``Temporal Improvements for Modeling Emissions
+by Scaling'' (TIMES) scaling factors, introduced by \citet{nassar13a},
+are again applied to the Miller-Pera monthly emissions estimates for
+\ctver.  The scaling factors consist of seven day-of-week global
+scaling factor maps, and 24 hourly global scaling factor maps to
+represent the diurnal cycle.  For use in TM5, the hourly scaling
+factors were aggregated to three-hourly factors to accommodate the
+time step of the model.
+
+
+\item[Extrapolation] The full CDIAC at AppState dataset is
+  only available through 2022 at time of running. A prior
+  estimate of the fluxes through April of 2026 is required to optimize
+  fluxes through the end of 2025, to accommodate our 12-week
+  assimilation window.
+
+  For 2023 and 2024 the fractional increases of
+  per-country, sectoral emissions are taken from The Energy Institute
+  (formerly British Petroleum) Statistical Review of World Energy
+  \citep{ei25a} (for coal, oil, gas, and flaring) and the
+  \href{https://www.usgs.gov/centers/national-minerals-information-center/cement-statistics-and-information}{USGS
+    NMIC Cement Mineral Commodity Summaries} (for cement emissions).
+  For example, to calculate 2023 coal emissions for France, the
+  EI ratio of 2023 to 2022 coal consumption for France is used to
+  scale 2022 CDIAC emissions, which are then used to rescale the
+  EDGAR spatial patterns. Only the largest producing countries are
+  included in the EI and USGS datasets, so regional or world-average
+  ratios are used for extrapolation of other countries.
+
+  For 2025 and the beginning of 2026, global fractional increases
+  are assumed (+2.5\% per year for oil and gas, +1\% per year for
+  coal and flaring).  The final months, February through April 2026,
+  are further scaled by year-on-year ratios from the Carbon Monitor
+  near-real-time estimates \citep{liu20a}.  No fuel-type data is
+  available from Carbon Monitor, so the same year-on-year fractional
+  changes are applied to all fuel types.
+
+\end{description}
+
+% Bibliography inlined from ct.bib (apalike) so this file builds with pdflatex alone.
+\begin{thebibliography}{}
+
+\bibitem[Blasing et~al., 2004]{blasing04a}
+Blasing, T., Marland, G., and Broniak, C. (2004).
+\newblock Estimates of monthly {CO}$_2$ emissions and associated
+  $^{13}${C}/$^{12}${C} values from fossil-fuel consumption in the {USA}
+  (1981-2003).
+\newblock {\em Carbon Dioxide Information Analysis Center, Oak Ridge National
+  Laboratory, U.S. Department of Energy, Oak Ridge, Tenn., U.S.A.}
+
+\bibitem[Boden et~al., 2017]{boden17a}
+Boden, T.~A., Marland, G., and Andres, R.~J. (2017).
+\newblock Global, regional, and national fossil fuel {CO}$_2$ emissions.
+\newblock Technical report, Carbon Dioxide Information Analysis Center, Oak
+  Ridge National Laboratory, U.S. Department of Energy, Oak Ridge, Tenn.,
+  U.S.A.
+
+\bibitem[Crippa et~al., 2025]{crippa25a}
+Crippa, M., Guizzardi, D., Pagani, F., Schaaf, E., Muntean, M., et~al. (2025).
+\newblock {EDGAR} ({E}missions {D}atabase for {G}lobal {A}tmospheric
+  {R}esearch) 2025 {GHG} release.
+
+\bibitem[{Energy Institute}, 2025]{ei25a}
+{Energy Institute} (2025).
+\newblock {\em {S}tatistical {R}eview of {W}orld {E}nergy 2025}.
+\newblock Energy Institute, London.
+
+\bibitem[Erb and Marland, 2026]{erb26a}
+Erb, M. and Marland, G. (2026).
+\newblock {CDIAC} at {AppState}: global, regional, and national fossil-fuel
+  {CO}$_2$ emissions.
+
+\bibitem[Liu et~al., 2020]{liu20a}
+Liu, Z., Ciais, P., Deng, Z., Davis, S.~J., Zheng, B., Wang, Y., Cui, D., Zhu,
+  B., Dou, X., Ke, P., Sun, T., Guo, R., Zhong, H., Boucher, O., Br{\'{e}}on,
+  F.-M., Lu, C., Guo, R., Xue, J., Boucher, E., Tanaka, K., and Chevallier, F.
+  (2020).
+\newblock {C}arbon {M}onitor, a near-real-time daily dataset of global {CO}$_2$
+  emission from fossil fuel and cement production.
+\newblock {\em Scientific Data}, 7(1).
+
+\bibitem[Nassar et~al., 2013]{nassar13a}
+Nassar, R., Napier-{L}inton, L., Gurney, K.~R., Andres, R.~J., Oda, T., Vogel,
+  F.~R., and Deng, F. (2013).
+\newblock Improving the temporal and spatial distribution of {CO}$_2$ emissions
+  from global fossil fuel emission data sets.
+\newblock {\em Journal of Geophysical Research: Atmospheres}, 118(2):917--933.
+
+\bibitem[Pera et~al., 2026]{pera26a}
+Pera, A., Jacobson, A.~R., and Miller, J.~B. (2026).
+\newblock Gridded 1$^{\circ}$ $\times$ 1$^{\circ}$ monthly fossil-fuel {CO}$_2$
+  emission estimates (1993--2025) for use as prior fluxes in atmospheric
+  inversion systems.
+\newblock Data product version 2026; pipeline code at
+  \url{https://github.com/noaa-gml/Miller-Pera-FF}.
+
+\bibitem[Rasmussen, 1991]{rasmussen91a}
+Rasmussen, L. (1991).
+\newblock Piecewise integral splines of low degree.
+\newblock {\em Computers \& Geosciences}, 17(9):1255--1263.
+
+\bibitem[Thoning et~al., 1989]{thoning89a}
+Thoning, K.~W., Tans, P.~P., and Komhyr, W.~D. (1989).
+\newblock Atmospheric carbon dioxide at {M}auna {L}oa observatory. 2.
+  {A}nalysis of the {NOAA} {GMCC} data, 1974-1985.
+\newblock {\em Journal of Geophysical Research-Atmospheres}, 94:8549--8565.
+
+\end{thebibliography}
+
+\end{document}
