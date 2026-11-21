@@ -13,6 +13,16 @@ This project loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Output format
+
+- **Monolithic file stored as float32 + deflate.** `post_process.py` writes
+  `fossil_imp` and `fossil_imp_cell` as float32, zlib level 4 with shuffle, the
+  encoding the per-year and CarbonTracker files already use: 411 → 147 MB per
+  method. The read-back check is now relative (< 1e-6; float32's half-ulp is
+  6e-8), as is verify.ipynb 6b's unit-chain check. The CarbonTracker files split
+  from it are unchanged: every month of `outputs/ct/` and `delivery/20260608/`
+  is bitwise equal to the float32 monolithic.
+
 ### Tooling
 
 - **`compare_products.py`** — new: compares the delivered product against

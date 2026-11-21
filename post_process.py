@@ -280,16 +280,20 @@ def main(method: CMMethod = "assumed") -> None:
     # 6. Write monolithic file
     # ------------------------------------------------------------------
     print(f"Writing monolithic file {monolithic} ...")
-    ds.pint.dequantify().to_netcdf(monolithic)
+    # Gridded fields as float32 + deflate, like the per-year and CT files (half-ulp 6e-8 relative)
+    mono_encoding = {v: {"dtype": "float32", "zlib": True, "complevel": 4, "shuffle": True}
+                     for v in (VAR_NAME, "fossil_imp_cell")}
+    ds.pint.dequantify().to_netcdf(monolithic, encoding=mono_encoding)
     print(f"  Wrote {monolithic}  {VAR_NAME} shape={ds[VAR_NAME].shape}  dims={ds[VAR_NAME].dims}")
     _assert_dim_order(monolithic, VAR_NAME)
 
-    # Round-trip: read back and verify values survive encoding
+    # Round-trip: read back and verify values survive the float32 encoding
     ds_rt = xr.open_dataset(monolithic)
-    max_rt_err = float(np.max(np.abs(ds_rt[VAR_NAME].values - fossil)))
+    max_rt_err = float(np.max(np.abs(ds_rt[VAR_NAME].values - fossil) /
+                              np.where(fossil > 0, fossil, 1.0)))
     ds_rt.close()
-    assert max_rt_err < 1e-20, f"Monolithic round-trip error: max abs diff = {max_rt_err:.2e}"
-    print(f"  Round-trip OK (max abs diff {max_rt_err:.2e})")
+    assert max_rt_err < 1e-6, f"Monolithic round-trip error: max rel diff = {max_rt_err:.2e}"
+    print(f"  Round-trip OK (max rel diff {max_rt_err:.2e})")
 
     # ------------------------------------------------------------------
     # 7. Split per-year files FROM the same dataset (full years only —

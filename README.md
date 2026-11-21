@@ -270,7 +270,7 @@ CarbonTracker conventions:
 
 ### Monolithic Source File (`from_gml/gml_ff_co2_2026b_<method>.nc`)
 
-All 400 months in one file, used as input to `split_ct.py`. Contains `fossil_imp` (mol/m²/s) and `fossil_imp_cell` (mol/cell/yr), 1°×1°, monthly 1993-01 through 2026-04.
+All 400 months in one file, used as input to `split_ct.py`. Contains `fossil_imp` (mol/m²/s) and `fossil_imp_cell` (mol/cell/yr), 1°×1°, monthly 1993-01 through 2026-04. Both fields are float32 with deflate (level 4, shuffle), the precision of the per-year and CarbonTracker files; about 147 MB.
 
 ### TM5/Fortran Per-Year Files (in the development repo)
 
@@ -480,7 +480,7 @@ Comparison checks are in `verify_nrt.ipynb` (Check 6e).
 - **6g.** TM5 yearly file spot-check — per-year `.nc` files in `outputs/yearly/` exist and have expected shape
 - **6h.** `month_lengths` calendar accuracy — February of every leap year = 29×86400 s, non-leap = 28×86400 s; each year's 12 monthly lengths sum to its `year_length` (catches calendar offset bugs if time indexing drifts by one month)
 - **6i.** Coordinate bounds coverage & contiguity — `lat_bnds` spans exactly -90 to +90, `lon_bnds` spans -180 to +180, each pair of adjacent bounds shares an edge (no gaps or overlaps), all widths uniformly 1°
-- **6j.** float32 encoding fidelity of per-year TM5 files — for three sample years (first, middle, last), compare float32 per-year files to float64 monolithic; max relative error < 1e-5 (typical float32 ≈ 6×10⁻⁸), no underflow pixels (mono>0 but yr=0)
+- **6j.** float32 encoding fidelity of per-year TM5 files — for three sample years (first, middle, last), compare float32 per-year files to the (float32) monolithic; max relative error < 1e-5 (typical float32 ≈ 6×10⁻⁸), no underflow pixels (mono>0 but yr=0)
 - **6k.** CF global attribute completeness & source provenance — `Conventions='CF-1.8'`, `title`/`source`/`history`/`institution` all present and non-empty, `source` contains CDIAC/EI/EDGAR/USGS keywords, `earth_radius` variable = 6371.009 km (John Miller's value)
 
 *Section 7 — Comparison with Previous Products (7a–7d):*
